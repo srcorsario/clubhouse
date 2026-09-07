@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Club House Menu</title>
+    <link rel="icon" type="image/png" href="imagenes/icon.png"> 
+    <!-- NUEVO (28 agosto): igual que script.js, style.css necesita su propio ?v= de cache-busting
+         — hasta ahora no lo tenía, así que un cambio de CSS podía tardar hasta 10 minutos en
+         llegar al navegador del cliente aunque el archivo en GitHub ya fuera el nuevo. IMPORTANTE:
+         cada vez que se suba un style.css nuevo, hay que subir también este número. -->
+    <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body> 
+    <header> 
+        <div class="header-logos">
+            <img src="logo-clubhouse.png" alt="Logo Club House" class="header-logo">
+            <span id="header-menu-title"></span>
+            <img src="negro.png" alt="Logo Negro" class="header-logo">
+        </div>
+        
+        <div id="language-selector">
+            <button id="btn-ES" onclick="changeLanguage('ES')" class="active">Español</button>
+            <button id="btn-EN" onclick="changeLanguage('EN')">English</button>
+            <button id="btn-DE" onclick="changeLanguage('DE')">Deutsch</button>
+            <button id="btn-FR" onclick="changeLanguage('FR')">Français</button>
+            <button id="btn-IT" onclick="changeLanguage('IT')">Italiano</button>
+            <select id="more-langs" onchange="changeLanguage(this.value)">
+                <option value="">🌐 Más...</option>
+            </select>
+        </div>
+        <div class="category-wrapper"> 
+            <nav id="category-selector"></nav> 
+        </div> 
+    </header>
+
+    <main id="menu-container"> 
+        <h2 id="current-category-name"></h2> 
+        <div id="items-list">
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-70"></span>
+                    <span class="skeleton-text line-40"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-60"></span>
+                    <span class="skeleton-text line-30"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+            <div class="item-row skeleton-row">
+                <div class="item-content">
+                    <span class="skeleton-text line-50"></span>
+                    <span class="skeleton-text line-40"></span>
+                </div>
+                <div class="price-box">
+                    <span class="skeleton-text line-20"></span>
+                </div>
+            </div>
+        </div> 
+    </main>
+
+    <div id="photo-modal" onclick="closeModal()"> 
+        <span class="close-modal" onclick="closeModal()">&times;</span>  
+        <button id="prev-btn" class="nav-btn" onclick="changePhoto(-1); event.stopPropagation();">❮</button>  
+        <img id="modal-img" src="" alt="Vista previa" onclick="event.stopPropagation();">  
+        <button id="next-btn" class="nav-btn" onclick="changePhoto(1); event.stopPropagation();">❯</button> 
+    </div>
+
+    <!-- NUEVO (26 agosto): ?v= de cache-busting en script.js — sin esto, el navegador (sobre
+         todo en móvil) puede seguir sirviendo una copia antigua cacheada de script.js aunque el
+         archivo en GitHub ya sea el nuevo, igual que ya pasaba con la imagen del vino "El
+         Tenista" antes de que se le añadiera su propio ?v=. IMPORTANTE: cada vez que se suba un
+         script.js nuevo, hay que subir también este número (basta con que cambie, no hace falta
+         que coincida con APP_VERSION de dentro del script) — si no, esta protección no sirve de
+         nada porque el navegador seguirá viendo la misma URL de siempre. -->
+    <script src="script.js?v=1.0.0-clubhouse"></script>
+</body>
+</html>
