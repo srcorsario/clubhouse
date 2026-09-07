@@ -64,7 +64,7 @@ header {
 }
 
 /* NUEVO: El logo de la izquierda se define con el doble de tamaño (48px) */
-img.header-logo[src*="logo RG_REST.png"] {
+img.header-logo[src*="logo-clubhouse.png"] {
     height: 48px;
     max-height: 48px;
 }
