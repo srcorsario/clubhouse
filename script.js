@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfQmS5FqOqRaIptpnru0u9RU4_4TixeeTcz-TUFimsIa_Svoex6IkFbwmpa6-KOw-bdw/exec';
-const APP_VERSION = 'v1.0.0-clubhouse';
+const APP_VERSION = 'v1.1.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -79,232 +79,128 @@ let allData = [];
 // (fetchCategoriasDeshabilitadas), solo que generateItemHtml() los consulta directamente por
 // su id fijo en vez de por pestanaId.
 let idsGlobalesDesactivados = new Set();
-let currentLang = 'ES', currentCat = '12';
+let currentLang = 'ES', currentCat = 'sugerencias';
 let currentGalleryPath = '', currentPhotoIndex = 1, maxPhotosFound = 1;
 let verifiedImages = {}; 
 let preloadQueue = [];
 let isPreloading = false;
 let currentPreloadSession = 0;
 
-// NUEVO (22 agosto): "let" en vez de "const" — init() reasigna esta lista tras filtrar las
-// pestañas que el Web Editor Pro haya desactivado (ver fetchCategoriasDeshabilitadas()).
+// REESCRITO para Club House: la lista de categorías/pestañas de la web pública y el rango de
+// IDs de plato que cae dentro de cada una. A diferencia de RG (donde el ID de categoría era un
+// simple prefijo del ID de plato, p.ej. categoría "1" = platos "1xxx"), en Club House varias
+// categorías pequeñas conviven dentro del mismo rango de miles (p.ej. Tostadas e Ingredientes
+// extra tostadas están las dos en 1xxx), así que cada categoría lleva su(s) rango(s) explícito(s)
+// de ID en vez de deducirse por prefijo — ver CATEGORY_RANGES e isItemInCategory() más abajo.
+// NUEVO: "let" en vez de "const" — init() reasigna esta lista tras filtrar las pestañas que el
+// Web Editor Pro haya desactivado (ver fetchCategoriasDeshabilitadas()).
 let categoriesList = [
-    { 
-        id: '12', 
-        ES: 'Sugerencias', EN: 'Suggestions', DE: 'Vorschläge', FR: 'Suggestions', IT: 'Suggerimenti',
-        RU: 'Предложения', NL: 'Suggesties', PL: 'Sugestie', SV: 'Förslag', NO: 'Forslag',
-        DA: 'Forslag', FI: 'Suositukset', PT: 'Sugestões', RO: 'Sugestii', HU: 'Ajánlatok',
-        CS: 'Doporučení', EL: 'Προτάσεις', TR: 'Öneriler', AR: 'اقتraحات', ZH: '推荐', JA: 'おすすめ',
-        KO: '추천 메뉴', CA: 'Suggeriments', EU: 'Gomendioak', GL: 'Suxestións', VA: 'Suggeriments'
-    }, 
-    { 
-        id: '1', 
-        ES: 'Entrantes', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti',
-        RU: 'Закуски', NL: 'Voorgerechten', PL: 'Przystawki', SV: 'Förrätter', NO: 'Forretter',
-        DA: 'Forretter', FI: 'Alkuruoat', PT: 'Entradas', RO: 'Gustări', HU: 'Előételek',
-        CS: 'Předkrmy', EL: 'Ορεκτικά', TR: 'Başlangıçlar', AR: 'مقبلات', ZH: '前菜', JA: '前菜',
-        KO: '에피타이저', CA: 'Entrants', EU: 'Hastekoak', GL: 'Entrantes', VA: 'Entrants'
-    }, 
-    { 
-        id: '2', 
-        ES: 'Ensaladas', EN: 'Salads', DE: 'Salate', FR: 'Salades', IT: 'Insalate',
-        RU: 'Салаты', NL: 'Salades', PL: 'Sałatky', SV: 'Sallader', NO: 'Salater',
-        DA: 'Salater', FI: 'Salaatit', PT: 'Saladas', RO: 'Salate', HU: 'Saláták',
-        CS: 'Saláty', EL: 'Σαλάτες', TR: 'Salatalar', AR: 'سلطات', ZH: '沙拉', JA: 'サラダ',
-        KO: '샐러드', CA: 'Amanides', EU: 'Entsaladak', GL: 'Ensaladas', VA: 'Amanides'
-    }, 
-    { 
-        id: '3', 
-        ES: 'Arroces & Pastas', EN: 'Rice & Pasta', DE: 'Reis & Pasta', FR: 'Riz & Pâtes', IT: 'Riso e Pasta',
-        RU: 'Рис и паста', NL: 'Rijst & Pasta', PL: 'Ryż i Makaron', SV: 'Ris & Pasta', NO: 'Ris og pasta',
-        DA: 'Ris & Pasta', FI: 'Riisi & Pasta', PT: 'Arroz e Massa', RO: 'Orez și paste', HU: 'Rizs és tészták',
-        CS: 'Rýže a těstoviny', EL: 'Ρύζι & Ζυμαρικά', TR: 'Pilav & Makarna', AR: 'أرز وباستا', ZH: '米饭与面食', JA: 'ライス＆パスタ',
-        KO: '라이스 & 파스타', CA: 'Arrossos i Pastes', EU: 'Arrozak eta Pastak', GL: 'Arroces e Pastas', VA: 'Arrossos i Pastes'
-    }, 
     {
-        id: '5',
-        ES: 'Principales', EN: 'Mains', DE: 'Hauptspeisen', FR: 'Plats', IT: 'Piatti',
-        RU: 'Основные блюда', NL: 'Hoofdgerechten', PL: 'Dania główne', SV: 'Huvudrätter', NO: 'Hovedrätter',
-        DA: 'Hovedretter', FI: 'Pääruoat', PT: 'Pratos principales', RO: 'Feluri principale', HU: 'Főételek',
-        CS: 'Hlavní jídla', EL: 'Κυρίως Πιάτα', TR: 'Ana Yemekler', AR: 'أطباق رئيسية', ZH: '主菜', JA: 'メインディッシュ',
-        KO: '메인 요리', CA: 'Principals', EU: 'Plater Nagusiak', GL: 'Principais', VA: 'Principals'
-    }, 
-    { 
-        id: '7', 
-        ES: 'Niños', EN: 'Kids', DE: 'Kinder', FR: 'Enfants', IT: 'Bambini',
-        RU: 'Детское menu', NL: 'Kinderen', PL: 'Dla dzieci', SV: 'Barn', NO: 'Barn',
-        DA: 'Børn', FI: 'Lapset', PT: 'Crianças', RO: 'Copii', HU: 'Gyerekeknek',
-        CS: 'Pro děti', EL: 'Παιδικά', TR: 'Çocuklar', AR: 'أطفال', ZH: '儿童餐', JA: 'キッズメニュー',
-        KO: '어린이 메뉴', CA: 'Nens', EU: 'Umeak', GL: 'Nenos', VA: 'Xiquets'
-    }, 
-    { 
-        id: '8', 
-        ES: 'Postres', EN: 'Desserts', DE: 'Desserts', FR: 'Desserts', IT: 'Dolci',
-        RU: 'Десерты', NL: 'Desserts', PL: 'Desery', SV: 'Efterrätter', NO: 'Desesser',
-        DA: 'Desesser', FI: 'Jälkiruoat', PT: 'Sobremesas', RO: 'Deserturi', HU: 'Desszertek',
-        CS: 'Dezerty', EL: 'Επιδόρπια', TR: 'Tatlılar', AR: 'حلويات', ZH: '甜点', JA: 'デザート',
-        KO: '디저트', CA: 'Postres', EU: 'Postreak', GL: 'Postres', VA: 'Postres'
-    }, 
-    { 
-        id: '9', 
-        ES: 'Café', EN: 'Coffee', DE: 'Kaffee', FR: 'Café', IT: 'Caffè',
-        RU: 'Кофе', NL: 'Koffie', PL: 'Kawa', SV: 'Kaffe', NO: 'Kaffe',
-        DA: 'Kaffe', FI: 'Kahvi', PT: 'Café', RO: 'Cafea', HU: 'Kávé',
-        CS: 'Káva', EL: 'Καφές', TR: 'Kahve', AR: 'قهوة', ZH: '咖啡', JA: 'コーヒー',
-        KO: '커피', CA: 'Cafè', EU: 'Kafea', GL: 'Café', VA: 'Cafè'
-    }, 
-    { 
-        id: '10', 
-        ES: 'Bebidas', EN: 'Drinks', DE: 'Getränke', FR: 'Boissons', IT: 'Bibite',
-        RU: 'Напитки', NL: 'Dranken', PL: 'Napoje', SV: 'Drycker', NO: 'Drikke',
-        DA: 'Drikkevarer', FI: 'Juomat', PT: 'Bebidas', RO: 'Băuturi', HU: 'Italok',
-        CS: 'Nápoje', EL: 'Ποτά', TR: 'İçecekler', AR: 'مشروبات', ZH: '饮料', JA: 'ドリンク',
-        KO: '음료', CA: 'Begudes', EU: 'Edariak', GL: 'Bebidas', VA: 'Begudes'
-    }, 
-    { 
-        id: '11', 
-        ES: 'Cervezas', EN: 'Beers', DE: 'Biere', FR: 'Bières', IT: 'Birre',
-        RU: 'Пиво', NL: 'Bieren', PL: 'Piwa', SV: 'Öl', NO: 'Øl',
-        DA: 'Øl', FI: 'Olutta', PT: 'Cervejas', RO: 'Beri', HU: 'Sörök',
-        CS: 'Priva', EL: 'Μπύρες', TR: 'Biralar', AR: 'بيرة', ZH: '啤酒', JA: 'ビール',
-        KO: '맥주', CA: 'Cerveses', EU: 'Garagardoak', GL: 'Cerveses', VA: 'Cerveses'
-    }, 
-    { 
-        id: '131', 
-        ES: 'Vinos Blancos', EN: 'White Wines', DE: 'Weissweine', FR: 'Vins Blancs', IT: 'Vini Bianchi',
-        RU: 'Белые вина', NL: 'Witte wijnen', PL: 'Białe wina', SV: 'Vita viner', NO: 'Hvite viner',
-        DA: 'Hvidvine', FI: 'Valkoviinit', PT: 'Vinhos brancos', RO: 'Vinuri albe', HU: 'Fehérborok',
-        CS: 'Bílá vína', EL: 'Λευκά Κρασιά', TR: 'Beyaz Şaraplar', AR: 'نبيذ أبيض', ZH: '白葡萄酒', JA: '白ワイン',
-        KO: '화이트 와인', CA: 'Vins Blancs', EU: 'Ardo Zuriak', GL: 'Viños Brancos', VA: 'Vins Blancs'
-    }, 
-    { 
-        id: '132', 
-        ES: 'Vinos Rosados', EN: 'Rosé Wines', DE: 'Roséweine', FR: 'Vins Rosés', IT: 'Vini Rosati',
-        RU: 'Розовые вина', NL: 'Rosé wijnen', PL: 'Wina różowe', SV: 'Roséviner', NO: 'Roséviner',
-        DA: 'Rosévine', FI: 'Roséviinit', PT: 'Vinhos rosés', RO: 'Vinuri roze', HU: 'Rozé borok',
-        CS: 'Růžová vína', EL: 'Ροζέ Κρασιά', TR: 'Roze Şaraplar', AR: 'نبيذ روزيه', ZH: '桃红葡萄酒', JA: 'ロゼワイン',
-        KO: '로제 와인', CA: 'Vins Rosats', EU: 'Ardo Arrosak', GL: 'Viños Rosados', VA: 'Vins Rosats'
-    }, 
-    { 
-        id: '133', 
-        ES: 'Vinos Tintos', EN: 'Red Wines', DE: 'Rotweine', FR: 'Vins Rouges', IT: 'Vini Rossi',
-        RU: 'Красные вина', NL: 'Rode wijnen', PL: 'Czerwone wina', SV: 'Röda viner', NO: 'Røde viner',
-        DA: 'Rødvine', FI: 'Punaviinit', PT: 'Vinhos tintos', RO: 'Vinuri roșii', HU: 'Vörösborok',
-        CS: 'Červená vína', EL: 'Κόκκινα Κρασιά', TR: 'Kırmızı Şaraplar', AR: 'نبيذ أحمر', ZH: '红葡萄酒', JA: '赤ワイン',
-        KO: '레드 와인', CA: 'Vins Negres', EU: 'Ardo Beltzak', GL: 'Viños Tintos', VA: 'Vins Negres'
-    }, 
-    { 
-        id: '134', 
-        ES: 'Cavas & Champagne', EN: 'Cava & Champagne', DE: 'Cava & Champagne', FR: 'Cava & Champagne', IT: 'Cava & Champagne',
-        RU: 'Кава и Шампанское', NL: 'Cava & Champagne', PL: 'Cava i Szampan', SV: 'Cava & Champagne', NO: 'Cava og champagne',
-        DA: 'Cava & Champagne', FI: 'Cava & Samppanja', PT: 'Cavas e Champagne', RO: 'Cava & Șampanie', HU: 'Cava és pezsgők',
-        CS: 'Cava a Šampaňské', EL: 'Cava & Σαμπάνια', TR: 'Kava & Şampanya', AR: 'كافا وشامبانيا', ZH: '卡瓦与香槟', JA: 'カヴァ＆シャンパン',
-        KO: '카바 & 샴페인', CA: 'Caves i Xampany', EU: 'Cabak eta Xanpaina', GL: 'Cavas e Champán', VA: 'Caves i Xampany'
+        id: 'sugerencias',
+        ES: 'Sugerencias', EN: "Chef's Suggestions", DE: 'Empfehlungen des Chefs', FR: 'Suggestions du Chef', IT: 'Suggerimenti dello Chef'
+    },
+    {
+        id: 'tostadas',
+        ES: 'Tostadas', EN: 'Toasts', DE: 'Toasts', FR: 'Toasts', IT: 'Toast'
+    },
+    {
+        id: 'creps',
+        ES: 'Creps', EN: 'Crêpes', DE: 'Crêpes', FR: 'Crêpes', IT: 'Crêpe'
+    },
+    {
+        id: 'bocadillos',
+        ES: 'Bocadillos', EN: 'Baguette Sandwiches', DE: 'Baguette-Sandwiches', FR: 'Sandwichs Baguette', IT: 'Panini Baguette'
+    },
+    {
+        id: 'sandwich',
+        ES: 'Sandwich', EN: 'Sandwiches', DE: 'Sandwiches', FR: 'Sandwichs', IT: 'Sandwich'
+    },
+    {
+        id: 'entrantes',
+        ES: 'Entrantes', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti'
+    },
+    {
+        id: 'pizzas',
+        ES: 'Pizzas', EN: 'Pizzas', DE: 'Pizzen', FR: 'Pizzas', IT: 'Pizze'
+    },
+    {
+        id: 'ensaladas',
+        ES: 'Ensaladas', EN: 'Salads', DE: 'Salate', FR: 'Salades', IT: 'Insalate'
+    },
+    {
+        id: 'hamburguesas',
+        ES: 'Hamburguesas', EN: 'Burgers', DE: 'Burger', FR: 'Burgers', IT: 'Hamburger'
+    },
+    {
+        id: 'principales',
+        ES: 'Platos Principales', EN: 'Main Courses', DE: 'Hauptgerichte', FR: 'Plats Principaux', IT: 'Piatti Principali'
+    },
+    {
+        id: 'ninos',
+        ES: 'Niños', EN: 'Kids', DE: 'Kinder', FR: 'Enfants', IT: 'Bambini'
+    },
+    {
+        id: 'postres',
+        ES: 'Postres', EN: 'Desserts', DE: 'Desserts', FR: 'Desserts', IT: 'Dolci'
+    },
+    {
+        id: 'cafes',
+        ES: 'Cafés e Infusiones', EN: 'Coffees & Teas', DE: 'Kaffee & Tee', FR: 'Cafés & Infusions', IT: 'Caffè e Tisane'
+    },
+    {
+        id: 'bebidas',
+        ES: 'Bebidas', EN: 'Drinks', DE: 'Getränke', FR: 'Boissons', IT: 'Bibite'
+    },
+    {
+        id: 'cervezas',
+        ES: 'Cervezas', EN: 'Beers', DE: 'Biere', FR: 'Bières', IT: 'Birre'
+    },
+    {
+        id: 'vinos_blancos',
+        ES: 'Vinos Blancos', EN: 'White Wines', DE: 'Weissweine', FR: 'Vins Blancs', IT: 'Vini Bianchi'
+    },
+    {
+        id: 'vinos_rosados',
+        ES: 'Vinos Rosados', EN: 'Rosé Wines', DE: 'Roséweine', FR: 'Vins Rosés', IT: 'Vini Rosati'
+    },
+    {
+        id: 'vinos_tintos',
+        ES: 'Vinos Tintos', EN: 'Red Wines', DE: 'Rotweine', FR: 'Vins Rouges', IT: 'Vini Rossi'
+    },
+    {
+        id: 'cavas',
+        ES: 'Cavas & Champagne', EN: 'Cava & Champagne', DE: 'Cava & Champagne', FR: 'Cava & Champagne', IT: 'Cava & Champagne'
     }
 ];
+// NOTA: si el idioma actual del cliente no está en un objeto de arriba (solo se han escrito
+// ES/EN/DE/FR/IT a propósito, los 5 "ESSENTIAL_LANGS"), el propio código de renderCategories()/
+// renderMenu() ya cae a EN y luego a ES automáticamente (c[currentLang] || c['EN'] || c['ES']),
+// así que no hace falta rellenar los 26 idiomas para que la web funcione correctamente.
 
-const subCatsLang = {
-    mallorca: {
-        ES: 'Vinos de Mallorca', EN: 'Majorcan Wines', DE: 'Weine aus Mallorca', FR: 'Vins de Majorque', IT: 'Vini di Maiorca',
-        RU: 'Мальорканские вина', NL: 'Mallorquijnse wijnen', PL: 'Wina z Majorki', SV: 'Mallorkinska viner', NO: 'Mallorcanske viner',
-        DA: 'Mallorcanske vine', FI: 'Mallorcalaiset viinit', PT: 'Vinhos de Maiorca', RO: 'Vinuri de Mallorca', HU: 'Mallorcai borok',
-        CS: 'Mallorská vína', EL: 'Κρασιά της Μαγιόρκα', TR: 'Mallorca Şarapları', AR: 'نبيذ مايوركا', ZH: '马略卡葡萄酒', JA: 'マヨルカワイン',
-        KO: '마요르카 와인', CA: 'Vins de Mallorca', EU: 'Mallorcako Ardoak', GL: 'Viños de Mallorca', VA: 'Vins de Mallorca'
-    },
-    copas: {
-        ES: 'Copas', EN: 'By the Glass', DE: 'Glasweise', FR: 'Au Verre', IT: 'Al Calice',
-        RU: 'По бокалам', NL: 'Per glas', PL: 'Na kieliszki', SV: 'Glasvis', NO: 'Glassvis',
-        DA: 'Pr. glas', FI: 'Laseittain', PT: 'A copo', RO: 'La pahar', HU: 'Pohárral',
-        CS: 'Rozlévaná vína', EL: 'Σε Πoτήρι', TR: 'Kadehte', AR: 'بأقداح الكأس', ZH: '杯装酒', JA: 'グラスワイン',
-        KO: '글라스 와인', CA: 'Copes', EU: 'Kopak', GL: 'Copas', VA: 'Copes'
-    },
-    otras: {
-        ES: 'Otras D.O.', EN: 'Other D.O.', DE: 'Andere D.O.', FR: 'Autres D.O.', IT: 'Altre D.O.',
-        RU: 'Другие D.O.', NL: 'Overige D.O.', PL: 'Inne D.O.', SV: 'Andra D.O.', NO: 'Andre D.O.',
-        DA: 'Andre D.O.', FI: 'Muut D.O.', PT: 'Outras D.O.', RO: 'Alte D.O.', HU: 'Egyéb D.O.',
-        CS: 'Ostatní D.O.', EL: 'Άλλες D.O.', TR: 'Diğer D.O.', AR: 'تسميات منشأ أخرى', ZH: '其他D.O.产区', JA: 'その他のD.O.',
-        KO: '기타 D.O. 원산지', CA: 'Altres D.O.', EU: 'Beste J.I.', GL: 'Outras D.O.', VA: 'Altres D.O.'
-    },
-    galicia: {
-        ES: 'Galicia', EN: 'Galicia', DE: 'Galicien', FR: 'Galice', IT: 'Galizia',
-        RU: 'Галисия', NL: 'Galicië', PL: 'Galcja', SV: 'Galicien', NO: 'Galicia',
-        DA: 'Galicien', FI: 'Galicia', PT: 'Galiza', RO: 'Galicia', HU: 'Galícia',
-        CS: 'Galicie', EL: 'Γαλικία', TR: 'Galiçya', AR: 'غاليسيا', ZH: '加利西亚', JA: 'ガリシア',
-        KO: '갈리시아', CA: 'Galícia', EU: 'Galizia', GL: 'Galicia', VA: 'Galícia'
-    },
-    rueda: {
-        ES: 'Rueda', EN: 'Rueda', DE: 'Rueda', FR: 'Rueda', IT: 'Rueda',
-        RU: 'Руэда', NL: 'Rueda', PL: 'Rueda', SV: 'Rueda', NO: 'Rueda',
-        DA: 'Rueda', FI: 'Rueda', PT: 'Rueda', RO: 'Rueda', HU: 'Rueda',
-        CS: 'Rueda', EL: 'Ρουέδα', TR: 'Rueda', AR: 'رويدا', ZH: '卢埃达', JA: 'ルエダ',
-        KO: '루에다', CA: 'Rueda', EU: 'Rueda', GL: 'Rueda', VA: 'Rueda'
-    },
-    rioja: {
-        ES: 'Rioja', EN: 'Rioja', DE: 'Rioja', FR: 'Rioja', IT: 'Rioja',
-        RU: 'Риоха', NL: 'Rioja', PL: 'Rioja', SV: 'Rioja', NO: 'Rioja',
-        DA: 'Rioja', FI: 'Rioja', PT: 'Rioja', RO: 'Rioja', HU: 'Rioja',
-        CS: 'Rioja', EL: 'Ριόχα', TR: 'Rioja', AR: 'ريوخا', ZH: '里奥哈', JA: 'リオハ',
-        KO: '리오하', CA: 'Rioja', EU: 'Errioxa', GL: 'Rioja', VA: 'Rioja'
-    },
-    ribera: {
-        ES: 'Ribera', EN: 'Ribera', DE: 'Ribera', FR: 'Ribera', IT: 'Ribera',
-        RU: 'Рибера', NL: 'Ribera', PL: 'Ribera', SV: 'Ribera', NO: 'Ribera',
-        DA: 'Ribera', FI: 'Ribera', PT: 'Ribera', RO: 'Ribera', HU: 'Ribera',
-        CS: 'Ribera', EL: 'Ριμπέρα', TR: 'Ribera', AR: 'ريبيرا', ZH: '杜埃罗河岸', JA: 'リベラ',
-        KO: '리베라', CA: 'Ribera', EU: 'Erribera', GL: 'Ribera', VA: 'Ribera'
-    }
-};
-
-const wineSubCats = [ 
-    { start: 13100, end: 13129, ...subCatsLang.mallorca }, 
-    { start: 13130, end: 13139, ...subCatsLang.galicia }, 
-    { start: 13140, end: 13149, ...subCatsLang.rueda }, 
-    { start: 13150, end: 13189, ...subCatsLang.otras }, 
-    { start: 13190, end: 13199, ...subCatsLang.copas }, 
-    { start: 13200, end: 13249, ...subCatsLang.mallorca }, 
-    { start: 13250, end: 13259, ...subCatsLang.copas }, 
-    { start: 13300, end: 13329, ...subCatsLang.mallorca }, 
-    { start: 13330, end: 13349, ...subCatsLang.rioja }, 
-    { start: 13350, end: 13369, ...subCatsLang.ribera }, 
-    { start: 13370, end: 13389, ...subCatsLang.otras }, 
-    { start: 13390, end: 13399, ...subCatsLang.copas }, 
-    { start: 13450, end: 13459, ...subCatsLang.copas }
-];
-
-// NUEVO: títulos de los 4 grupos reales de la categoría 12 (Sugerencias del Chef), calcados
-// de la agrupación que ya usa el admin en sugerencias-print.js (procesarYRender): Entrantes
-// (12100-12399), Principales (12400-12899, incluye pasta/arroz/pescado/carne juntos), Postres
-// (12900-12999) y Bodega/Vino (excepción: solo el ID 12990, aunque cae dentro del rango
-// numérico de postres). Reutiliza traducciones ya existentes en categoriesList donde coinciden.
-const sugerenciasGroupTitles = {
-    entrantes: {
-        ES: 'Entrantes', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti',
-        RU: 'Закуски', NL: 'Voorgerechten', PL: 'Przystawki', SV: 'Förrätter', NO: 'Forretter',
-        DA: 'Forretter', FI: 'Alkuruoat', PT: 'Entradas', RO: 'Gustări', HU: 'Előételek',
-        CS: 'Předkrmy', EL: 'Ορεκτικά', TR: 'Başlangıçlar', AR: 'مقبلات', ZH: '前菜', JA: '前菜',
-        KO: '에피타이저', CA: 'Entrants', EU: 'Hastekoak', GL: 'Entrantes', VA: 'Entrants'
-    },
-    principales: {
-        ES: 'Principales', EN: 'Mains', DE: 'Hauptspeisen', FR: 'Plats', IT: 'Piatti',
-        RU: 'Основные блюда', NL: 'Hoofdgerechten', PL: 'Dania główne', SV: 'Huvudrätter', NO: 'Hovedrätter',
-        DA: 'Hovedretter', FI: 'Pääruoat', PT: 'Pratos principales', RO: 'Feluri principale', HU: 'Főételek',
-        CS: 'Hlavní jídla', EL: 'Κυρίως Πιάτα', TR: 'Ana Yemekler', AR: 'أطباق رئيسية', ZH: '主菜', JA: 'メインディッシュ',
-        KO: '메인 요리', CA: 'Principals', EU: 'Plater Nagusiak', GL: 'Principais', VA: 'Principals'
-    },
-    postres: {
-        ES: 'Postres', EN: 'Desserts', DE: 'Desserts', FR: 'Desserts', IT: 'Dolci',
-        RU: 'Десерты', NL: 'Desserts', PL: 'Desery', SV: 'Efterrätter', NO: 'Desesser',
-        DA: 'Desesser', FI: 'Jälkiruoat', PT: 'Sobremesas', RO: 'Deserturi', HU: 'Desszertek',
-        CS: 'Dezerty', EL: 'Επιδόρπια', TR: 'Tatlılar', AR: 'حلويات', ZH: '甜点', JA: 'デザート',
-        KO: '디저트', CA: 'Postres', EU: 'Postreak', GL: 'Postres', VA: 'Postres'
-    },
-    vinos: {
-        ES: 'Vino', EN: 'Wine', DE: 'Wein', FR: 'Vin', IT: 'Vino',
-        RU: 'Вино', NL: 'Wijn', PL: 'Wino', SV: 'Vin', NO: 'Vin',
-        DA: 'Vin', FI: 'Viini', PT: 'Vinho', RO: 'Vin', HU: 'Bor',
-        CS: 'Víno', EL: 'Κρασί', TR: 'Şarap', AR: 'نبيذ', ZH: '葡萄酒', JA: 'ワイン',
-        KO: '와인', CA: 'Vi', EU: 'Ardoa', GL: 'Viño', VA: 'Vi'
-    }
+// NUEVO (Club House): rangos de ID de plato que pertenecen a cada pestaña — varias filas de la
+// tabla que dio el usuario para esta carta (ver conversación) caen dentro de la misma pestaña:
+// los "ingredientes extra" de tostadas/bocadillos/ensaladas se muestran DENTRO de su categoría
+// (no como pestaña propia), y Carne + Pescado + Guarnición extra se unen en "Platos Principales".
+const CATEGORY_RANGES = {
+    sugerencias:    [[12001, 12999]], // más adelante se añadirán subcategorías internas (pendiente)
+    tostadas:       [[1001, 1099], [1101, 1199]], // + Ingredientes extra tostadas
+    creps:          [[1201, 1299]],
+    bocadillos:     [[1301, 1399], [1401, 1499]], // + Ingredientes extra bocadillos
+    sandwich:       [[1501, 1599]],
+    entrantes:      [[1601, 1699]],
+    pizzas:         [[1701, 1799]],
+    ensaladas:      [[2001, 2099], [2101, 2199]], // + Ingrediente extra ensaladas
+    hamburguesas:   [[3901, 3999]],
+    principales:    [[4001, 4099], [4201, 4299], [5001, 5099]], // Carne + Pescado + Guarnición extra
+    ninos:          [[6001, 6099]],
+    postres:        [[7001, 7099]],
+    cafes:          [[9001, 9099], [9100, 9199]], // Cafés + Té e infusiones
+    bebidas:        [[10001, 10099], [10100, 10199], [10200, 10299]], // Refrescos + Zumos + Otras bebidas
+    cervezas:       [[11001, 11099]],
+    vinos_blancos:  [[13100, 13199]],
+    vinos_rosados:  [[13200, 13299]],
+    vinos_tintos:   [[13300, 13399]],
+    cavas:          [[13400, 13499]]
 };
 
 // REESCRITO: antes se descargaban las 26 columnas de nombre + info de golpe en un único
@@ -946,13 +842,11 @@ async function sincronizarConCache(cachedData) {
     guardarCacheLocal();
 }
 
-function isItemInCategory(itemId, catId) { 
-    const idStr = itemId.toString(); 
-    const catStr = catId.toString(); 
-    if (idStr.length === 4 && catStr.length === 1) return idStr.startsWith(catStr); 
-    if (idStr.length === 5 && catStr.length === 2) return idStr.startsWith(catStr); 
-    if (idStr.length === 5 && catStr.length === 3) return idStr.startsWith(catStr); 
-    return false;
+function isItemInCategory(itemId, catId) {
+    const idNum = parseInt(itemId, 10);
+    const rangos = CATEGORY_RANGES[catId];
+    if (!rangos) return false;
+    return rangos.some(([inicio, fin]) => idNum >= inicio && idNum <= fin);
 }
 
 function renderCategories() { 
@@ -992,62 +886,14 @@ function renderMenu() {
         return isItemInCategory(item.id, currentCat) && item.activa === 'SI' && (item.id % 1000 !== 0); 
     });
 
-    if (currentCat === '12') {
-        // NUEVO: Sugerencias se agrupa en 4 bloques fijos, igual que hace el admin en
-        // sugerencias-print.js — NO por rango contiguo de ID como los vinos, porque el ID
-        // 12990 es una excepción de vino que cae numéricamente dentro del bloque de postres.
-        let entrantes = [], principales = [], postres = [], vinosSug = [];
-        filtered.forEach(item => {
-            const idNum = parseInt(item.id, 10);
-            if (idNum === 12990) vinosSug.push(item);
-            else if (idNum >= 12100 && idNum <= 12399) entrantes.push(item);
-            else if (idNum >= 12400 && idNum <= 12899) principales.push(item);
-            else if (idNum >= 12900 && idNum <= 12999) postres.push(item);
-            else entrantes.push(item);
-        });
-        const renderSugGroup = (titleObj, lista) => {
-            if (lista.length === 0 || !grid) return;
-            const catName = titleObj[currentLang] || titleObj['EN'] || titleObj['ES'];
-            const finalName = currentLang === 'ES' ? catName : `${catName} - ${titleObj['ES']}`;
-            grid.innerHTML += `<h3 class="sub-category-title">${finalName}</h3>`;
-            lista.forEach(p => { grid.innerHTML += generateItemHtml(p); });
-        };
-        renderSugGroup(sugerenciasGroupTitles.entrantes, entrantes);
-        renderSugGroup(sugerenciasGroupTitles.principales, principales);
-        renderSugGroup(sugerenciasGroupTitles.postres, postres);
-        renderSugGroup(sugerenciasGroupTitles.vinos, vinosSug);
-    } else {
-        let currentActiveSubCatName = "";
-        filtered.forEach(item => {
-            const idNum = parseInt(item.id);
-            if (currentCat.startsWith('13')) {
-                const foundSub = wineSubCats.find(s => idNum >= s.start && idNum <= s.end);
-                if (foundSub && grid) {
-                    const subCatName = foundSub[currentLang] || foundSub['EN'] || foundSub['ES'];
-                    const finalSubName = currentLang === 'ES' ? subCatName : `${subCatName} - ${foundSub['ES']}`;
-                    if (finalSubName !== currentActiveSubCatName) {
-                        grid.innerHTML += `<h3 class="sub-category-title">${finalSubName}</h3>`;
-                        currentActiveSubCatName = finalSubName;
-                    }
-                }
-            }
-            if (grid) grid.innerHTML += generateItemHtml(item);
-        });
-    }
-
-    if (currentCat === '5') { 
-        const guarnis = allData.filter(item => item.id.toString().startsWith('6') && item.id.toString().length === 4 && item.activa === 'SI'); 
-        if (guarnis.length > 0 && grid) { 
-            const guarniTitles = { 
-                ES: 'Guarniciones', EN: 'Side Dishes', DE: 'Beilagen', FR: 'Garnitures', IT: 'Contorni',
-                KO: '사이드 메뉴', CA: 'Guarnicions', EU: 'Garnizioak', GL: 'Guarnicións', VA: 'Guarnicions' 
-            }; 
-            const titleText = guarniTitles[currentLang] || guarniTitles['EN'] || guarniTitles['ES']; 
-            const finalGuarniTitle = currentLang === 'ES' ? titleText : `${titleText} - ${guarniTitles['ES']}`;
-            grid.innerHTML += `<h3 class="sub-category-title">${finalGuarniTitle}</h3>`; 
-            guarnis.forEach(g => grid.innerHTML += generateItemHtml(g, true)); 
-        } 
-    }
+    // REESCRITO para Club House: de momento cada pestaña se pinta como lista plana (sin
+    // subcabeceras internas) — las de RG (agrupar Sugerencias en 4 bloques, subcategorías de
+    // vino por región, Guarniciones aparte dentro de Principales) no aplican aquí porque el
+    // reparto de categorías es distinto. "Sugerencias" queda pendiente de subcategorías propias
+    // (el usuario avisó que las añadirá más adelante); mientras tanto se ve todo junto.
+    filtered.forEach(item => {
+        if (grid) grid.innerHTML += generateItemHtml(item);
+    });
 }
 
 // NUEVO: helpers para pasar el JSON de info_* al onclick sin que ninguna comilla, apóstrofe
