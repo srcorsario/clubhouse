@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfQmS5FqOqRaIptpnru0u9RU4_4TixeeTcz-TUFimsIa_Svoex6IkFbwmpa6-KOw-bdw/exec';
-const APP_VERSION = 'v1.1.0-clubhouse';
+const APP_VERSION = 'v1.2.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -201,6 +201,28 @@ const CATEGORY_RANGES = {
     vinos_rosados:  [[13200, 13299]],
     vinos_tintos:   [[13300, 13399]],
     cavas:          [[13400, 13499]]
+};
+
+// NUEVO (Club House): dentro de las pestañas que fusionan "ingredientes/guarnición extra" con
+// sus platos normales, este rango se pinta APARTE, con su propia subcabecera — a petición del
+// usuario, para que quede claro que no son platos en sí sino extras que se añaden a uno.
+const EXTRA_RANGES = {
+    tostadas: {
+        start: 1101, end: 1199,
+        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra'
+    },
+    bocadillos: {
+        start: 1401, end: 1499,
+        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra'
+    },
+    ensaladas: {
+        start: 2101, end: 2199,
+        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra'
+    },
+    principales: {
+        start: 5001, end: 5099,
+        ES: 'Guarnición Extra', EN: 'Extra Side Dishes', DE: 'Extra-Beilagen', FR: 'Garnitures Supplémentaires', IT: 'Contorni Extra'
+    }
 };
 
 // REESCRITO: antes se descargaban las 26 columnas de nombre + info de golpe en un único
@@ -886,14 +908,32 @@ function renderMenu() {
         return isItemInCategory(item.id, currentCat) && item.activa === 'SI' && (item.id % 1000 !== 0); 
     });
 
-    // REESCRITO para Club House: de momento cada pestaña se pinta como lista plana (sin
-    // subcabeceras internas) — las de RG (agrupar Sugerencias en 4 bloques, subcategorías de
-    // vino por región, Guarniciones aparte dentro de Principales) no aplican aquí porque el
-    // reparto de categorías es distinto. "Sugerencias" queda pendiente de subcategorías propias
-    // (el usuario avisó que las añadirá más adelante); mientras tanto se ve todo junto.
-    filtered.forEach(item => {
-        if (grid) grid.innerHTML += generateItemHtml(item);
-    });
+    // REESCRITO para Club House: cada pestaña se pinta como lista plana, salvo que tenga un
+    // rango "extra" fusionado (ver EXTRA_RANGES) — en ese caso los platos normales van primero
+    // y los extras (ingredientes/guarnición extra) se separan debajo con su propia subcabecera,
+    // para que quede claro que no son platos en sí. Las demás cosas de RG (Sugerencias en 4
+    // bloques, subcategorías de vino por región) no aplican aquí porque el reparto de categorías
+    // es distinto. "Sugerencias" queda pendiente de subcategorías propias (el usuario avisó que
+    // las añadirá más adelante); mientras tanto se ve todo junto.
+    const extraInfo = EXTRA_RANGES[currentCat];
+    if (extraInfo) {
+        const normales = [], extras = [];
+        filtered.forEach(item => {
+            const idNum = parseInt(item.id, 10);
+            (idNum >= extraInfo.start && idNum <= extraInfo.end ? extras : normales).push(item);
+        });
+        normales.forEach(item => { if (grid) grid.innerHTML += generateItemHtml(item); });
+        if (extras.length > 0 && grid) {
+            const titleText = extraInfo[currentLang] || extraInfo['EN'] || extraInfo['ES'];
+            const finalTitle = currentLang === 'ES' ? titleText : `${titleText} - ${extraInfo['ES']}`;
+            grid.innerHTML += `<h3 class="sub-category-title">${finalTitle}</h3>`;
+            extras.forEach(item => { grid.innerHTML += generateItemHtml(item); });
+        }
+    } else {
+        filtered.forEach(item => {
+            if (grid) grid.innerHTML += generateItemHtml(item);
+        });
+    }
 }
 
 // NUEVO: helpers para pasar el JSON de info_* al onclick sin que ninguna comilla, apóstrofe
