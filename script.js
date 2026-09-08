@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.3.0-clubhouse';
+const APP_VERSION = 'v1.4.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -1062,21 +1062,32 @@ function generateItemHtml(item, isGuarni = false, catShowsDual = false) {
         ? `<div class="price-box price-box-dual"><span class="price-cell price-cell-half">${priceMedia}</span><span class="price-cell price-cell-full">${price}</span></div>`
         : `<div class="price-box">${price}</div>`;
 
+    // NUEVO (8 septiembre): reestructurado en 2 líneas independientes para que la descripción y
+    // los alérgenos puedan usar el ANCHO COMPLETO de la fila en vez de quedar apretados en la
+    // columna que dejan libre los precios. Antes item-content (nombre+descripción+alérgenos) y
+    // price-box compartían la misma fila flex, así que la descripción/alérgenos se veían
+    // comprimidos por el hueco del precio en TODAS sus líneas, no solo en la del nombre.
+    // Ahora: 1ª línea = nombre + precio(s) lado a lado; 2ª línea (ancho completo, sin el precio
+    // al lado) = descripción/detalle, nombre en el idioma secundario, y alérgenos.
+    const detailLineHtml = currentOpcionesTexto ? `<div class="item-detail-line">${currentOpcionesTexto}</div>` : '';
+    const secondaryLineHtml = currentLang !== 'ES'
+        ? `<div class="item-secondary-line">
+               <span class="name-secondary">${secondaryData.name}</span>
+               ${secondaryOpcionesTexto ? `<br><small class="item-detail-line-secondary">${secondaryOpcionesTexto}</small>` : ''}
+           </div>`
+        : '';
+
     return `
     <div class="item-row">
-        <div class="item-content" ${clickAction} ${clickableStyle}>
-            <span class="name-selected">
-                ${infoPlacement}
-                ${currentOpcionesTexto ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic; display:block; margin-top:2px;">${currentOpcionesTexto}</small>` : ''}
-            </span>
-            ${currentLang !== 'ES' ? `
-            <span class="name-secondary">
-                ${secondaryData.name}
-                ${secondaryOpcionesTexto ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic;">${secondaryOpcionesTexto}</small>` : ''}
-            </span>` : ''}
+        <div class="item-top-line">
+            <span class="name-selected" ${clickAction} ${clickableStyle}>${infoPlacement}</span>
+            ${priceBoxHtml}
+        </div>
+        <div class="item-below-line" ${clickAction} ${clickableStyle}>
+            ${detailLineHtml}
+            ${secondaryLineHtml}
             <div class="alergenos-list">${alergenosHtml}</div>
         </div>
-        ${priceBoxHtml}
         ${tenistaThumbHtml}
     </div>`;
 }

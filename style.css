@@ -173,35 +173,61 @@ img.header-logo[src*="negro.png"] {
     padding-bottom: 5px; 
 }
 
-.item-row { 
-    display: flex; 
-    flex-wrap: wrap; 
-    justify-content: space-between; 
-    align-items: flex-start; 
-    padding: 15px 0; 
-    border-bottom: 1px solid var(--border); 
+/* MODIFICADO (8 septiembre): item-row pasa de "fila flex única" a "columna de 2 líneas" — ver
+   item-top-line / item-below-line más abajo. Antes nombre+descripción+alérgenos vivían todos
+   dentro de la misma fila flex que el precio (item-content, flex:1), así que la descripción y
+   los alérgenos quedaban comprimidos por el ancho que dejaba libre el precio en TODAS sus
+   líneas. Ahora solo la 1ª línea (nombre + precio) comparte fila; la descripción, el nombre en
+   idioma secundario y los alérgenos van en una 2ª línea que ocupa el ancho COMPLETO de la fila. */
+.item-row {
+    display: flex;
+    flex-direction: column;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border);
 }
 
-.item-content { flex: 1; }
-
-.name-selected { 
-    font-weight: 700; 
-    font-size: 17px; 
-    display: block; 
+.item-top-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
 }
 
-.name-secondary { 
-    color: var(--grey); 
-    font-size: 14px; 
-    font-style: italic; 
-    display: block; 
-    margin-top: 2px; 
+.item-below-line {
+    margin-top: 4px;
+}
+
+.name-selected {
+    font-weight: 700;
+    font-size: 17px;
+    flex: 1;
+    min-width: 0;
+}
+
+.item-detail-line {
+    font-size: 0.85em;
+    opacity: 0.8;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+.name-secondary {
+    color: var(--grey);
+    font-size: 14px;
+    font-style: italic;
+    display: block;
+    margin-top: 2px;
+}
+
+.item-detail-line-secondary {
+    font-size: 0.85em;
+    opacity: 0.8;
+    font-style: italic;
 }
 
 .price-box {
     font-weight: 700;
     font-size: 17px;
-    margin-left: 15px;
     white-space: nowrap;
 }
 
@@ -226,13 +252,18 @@ img.header-logo[src*="negro.png"] {
 }
 .price-cell {
     display: inline-block;
-    width: 58px;
+    width: 54px;
     text-align: right;
     font-size: 16px;
     font-weight: 700;
     color: var(--text);
-    margin-left: 15px;
+    margin-left: 12px;
     white-space: nowrap;
+}
+/* NUEVO (8 septiembre): menos hueco ESPECÍFICAMENTE entre el precio de 1/2 y el de Entero (a
+   diferencia del hueco entre el nombre del plato y el bloque de precios, que se deja igual). */
+.price-cell-full {
+    margin-left: 4px;
 }
 .price-box-header .price-cell {
     font-size: 12px;
