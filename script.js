@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.5.0-clubhouse';
+const APP_VERSION = 'v1.6.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -156,6 +156,13 @@ let categoriesList = [
         ES: 'Bebidas', EN: 'Drinks', DE: 'Getränke', FR: 'Boissons', IT: 'Bibite'
     },
     {
+        // NUEVO (8 septiembre): pestaña nueva insertada entre "Bebidas" y "Cervezas" a petición
+        // del usuario. Con 2 subcategorías propias (ver SUBCATEGORIAS_RANGES): "Zumos Saludables"
+        // y "Botellas Saludables".
+        id: 'bebidas_saludables',
+        ES: 'Bebidas Saludables', EN: 'Healthy Drinks', DE: 'Gesunde Getränke', FR: 'Boissons Saines', IT: 'Bevande Salutari'
+    },
+    {
         id: 'cervezas',
         ES: 'Cervezas', EN: 'Beers', DE: 'Biere', FR: 'Bières', IT: 'Birre'
     },
@@ -200,6 +207,7 @@ const CATEGORY_RANGES = {
     postres:        [[7001, 7099]],
     cafes:          [[9001, 9099], [9100, 9199]], // Cafés + Té e infusiones
     bebidas:        [[10001, 10099], [10100, 10199], [10200, 10299]], // Refrescos + Zumos + Otras bebidas
+    bebidas_saludables: [[10301, 10399], [10401, 10499]], // Zumos Saludables + Botellas Saludables
     cervezas:       [[11001, 11099]],
     vinos_blancos:  [[13100, 13199]],
     vinos_rosados:  [[13200, 13299]],
@@ -227,6 +235,25 @@ const EXTRA_RANGES = {
         start: 5001, end: 5099,
         ES: 'Guarnición Extra', EN: 'Extra Side Dishes', DE: 'Extra-Beilagen', FR: 'Garnitures Supplémentaires', IT: 'Contorni Extra'
     }
+};
+
+// NUEVO (8 septiembre): pestañas que se dividen ENTERAS en varias subcategorías con subcabecera
+// propia siempre visible (a diferencia de EXTRA_RANGES, que es "platos normales + UN extra al
+// final"). Cada pestaña listada aquí ignora el reparto normal de renderMenu y en su lugar pinta,
+// en el ORDEN dado, una subcabecera + sus platos por cada bloque de este array. Un plato de la
+// pestaña que no caiga en NINGÚN rango de aquí se pinta de todos modos, suelto, ANTES de la
+// primera subcabecera (red de seguridad para no perder ningún plato por error de rango).
+const SUBCATEGORIAS_RANGES = {
+    bebidas_saludables: [
+        {
+            start: 10301, end: 10399,
+            ES: 'Zumos Saludables', EN: 'Healthy Juices', DE: 'Gesunde Säfte', FR: 'Jus Sains', IT: 'Succhi Salutari'
+        },
+        {
+            start: 10401, end: 10499,
+            ES: 'Botellas Saludables', EN: 'Healthy Bottled Drinks', DE: 'Gesunde Flaschengetränke', FR: 'Boissons en Bouteille Saines', IT: 'Bevande in Bottiglia Salutari'
+        }
+    ]
 };
 
 // NUEVO (8 septiembre): etiquetas de la cabecera "1/2 | Entero" que aparece encima de una
@@ -950,6 +977,32 @@ function renderMenu() {
     // bloques, subcategorías de vino por región) no aplican aquí porque el reparto de categorías
     // es distinto. "Sugerencias" queda pendiente de subcategorías propias (el usuario avisó que
     // las añadirá más adelante); mientras tanto se ve todo junto.
+    // NUEVO (8 septiembre): pestañas 100% subcategorizadas (ver SUBCATEGORIAS_RANGES) — p.ej.
+    // "Bebidas Saludables" con "Zumos Saludables" + "Botellas Saludables". Se pinta una
+    // subcabecera por bloque, en el orden dado, y cualquier plato que no caiga en ningún rango
+    // se pinta suelto ANTES de la primera subcabecera (red de seguridad).
+    const subcategorias = SUBCATEGORIAS_RANGES[currentCat];
+    if (subcategorias) {
+        const sueltos = filtered.filter(item => {
+            const idNum = parseInt(item.id, 10);
+            return !subcategorias.some(sc => idNum >= sc.start && idNum <= sc.end);
+        });
+        if (grid) sueltos.forEach(item => { grid.innerHTML += generateItemHtml(item, false, catShowsDual); });
+
+        subcategorias.forEach(sc => {
+            const idsBloque = filtered.filter(item => {
+                const idNum = parseInt(item.id, 10);
+                return idNum >= sc.start && idNum <= sc.end;
+            });
+            if (idsBloque.length === 0 || !grid) return;
+            const titleText = sc[currentLang] || sc['EN'] || sc['ES'];
+            const finalTitle = currentLang === 'ES' ? titleText : `${titleText} - ${sc['ES']}`;
+            grid.innerHTML += `<h3 class="sub-category-title">${finalTitle}</h3>`;
+            idsBloque.forEach(item => { grid.innerHTML += generateItemHtml(item, false, catShowsDual); });
+        });
+        return;
+    }
+
     const extraInfo = EXTRA_RANGES[currentCat];
     if (extraInfo) {
         const normales = [], extras = [];
