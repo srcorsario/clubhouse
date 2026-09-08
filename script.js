@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.6.0-clubhouse';
+const APP_VERSION = 'v1.7.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -167,6 +167,13 @@ let categoriesList = [
         ES: 'Cervezas', EN: 'Beers', DE: 'Biere', FR: 'Bières', IT: 'Birre'
     },
     {
+        // NUEVO (8 septiembre): pestaña nueva insertada entre "Cervezas" y "Vinos Blancos" a
+        // petición del usuario. Con 2 subcategorías propias (ver SUBCATEGORIAS_RANGES):
+        // "Aperitivos" y "Copas de vino y sangría".
+        id: 'aperitivos',
+        ES: 'Aperitivos', EN: 'Aperitifs', DE: 'Aperitifs', FR: 'Apéritifs', IT: 'Aperitivi'
+    },
+    {
         id: 'vinos_blancos',
         ES: 'Vinos Blancos', EN: 'White Wines', DE: 'Weissweine', FR: 'Vins Blancs', IT: 'Vini Bianchi'
     },
@@ -209,6 +216,7 @@ const CATEGORY_RANGES = {
     bebidas:        [[10001, 10099], [10100, 10199], [10200, 10299]], // Refrescos + Zumos + Otras bebidas
     bebidas_saludables: [[10301, 10399], [10401, 10499]], // Zumos Saludables + Botellas Saludables
     cervezas:       [[11001, 11099]],
+    aperitivos:     [[11101, 11199], [11201, 11299]], // Aperitivos + Copas de vino y sangría
     vinos_blancos:  [[13100, 13199]],
     vinos_rosados:  [[13200, 13299]],
     vinos_tintos:   [[13300, 13399]],
@@ -252,6 +260,16 @@ const SUBCATEGORIAS_RANGES = {
         {
             start: 10401, end: 10499,
             ES: 'Botellas Saludables', EN: 'Healthy Bottled Drinks', DE: 'Gesunde Flaschengetränke', FR: 'Boissons en Bouteille Saines', IT: 'Bevande in Bottiglia Salutari'
+        }
+    ],
+    aperitivos: [
+        {
+            start: 11101, end: 11199,
+            ES: 'Aperitivos', EN: 'Aperitifs', DE: 'Aperitifs', FR: 'Apéritifs', IT: 'Aperitivi'
+        },
+        {
+            start: 11201, end: 11299,
+            ES: 'Copas de vino y sangría', EN: 'Wine & Sangria by the Glass', DE: 'Wein & Sangria im Glas', FR: 'Vin & Sangria au Verre', IT: 'Vino e Sangria al Calice'
         }
     ]
 };
