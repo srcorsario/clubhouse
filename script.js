@@ -1059,7 +1059,7 @@ function generateItemHtml(item, isGuarni = false, catShowsDual = false) {
     // concreto no tiene media ración se deja un guion en esa celda. Sin columnas dobles en la
     // pestaña, se mantiene el price-box de siempre (un único precio).
     const priceBoxHtml = catShowsDual
-        ? `<div class="price-box price-box-dual"><span class="price-cell price-cell-half">${priceMedia || '–'}</span><span class="price-cell price-cell-full">${price}</span></div>`
+        ? `<div class="price-box price-box-dual"><span class="price-cell price-cell-half">${priceMedia}</span><span class="price-cell price-cell-full">${price}</span></div>`
         : `<div class="price-box">${price}</div>`;
 
     return `
