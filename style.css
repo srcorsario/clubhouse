@@ -208,6 +208,12 @@ img.header-logo[src*="negro.png"] {
     width: 100%;
     text-align: center;
 }
+.item-below-line-nota {
+    text-align: center;
+}
+.item-below-line-nota .alergenos-list {
+    justify-content: center;
+}
 
 .name-selected {
     font-weight: 700;

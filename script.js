@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.4.2-clubhouse';
+const APP_VERSION = 'v1.5.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -116,8 +116,12 @@ let categoriesList = [
         ES: 'Sandwich', EN: 'Sandwiches', DE: 'Sandwiches', FR: 'Sandwichs', IT: 'Sandwich'
     },
     {
+        // MODIFICADO (8 septiembre): pestaña renombrada de "Entrantes" a "Para Picar" a
+        // petición del usuario. Solo se cambia ES por ahora -- el usuario decidirá más
+        // adelante cómo aplicar esto en el resto de idiomas (EN/DE/FR/IT se dejan igual
+        // que antes hasta que lo indique).
         id: 'entrantes',
-        ES: 'Entrantes', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti'
+        ES: 'Para Picar', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti'
     },
     {
         id: 'pizzas',
@@ -1090,10 +1094,15 @@ function generateItemHtml(item, isGuarni = false, catShowsDual = false) {
         ? `<div class="item-top-line item-top-line-nota"><span class="name-selected nota-informativa-texto" ${clickAction} ${clickableStyle}>${infoPlacement}</span></div>`
         : `<div class="item-top-line"><span class="name-selected" ${clickAction} ${clickableStyle}>${infoPlacement}</span>${priceBoxHtml}</div>`;
 
+    // NUEVO (8 septiembre): la nota informativa también centra su 2ª línea (el detalle "//.../ /",
+    // el nombre en idioma secundario y los alérgenos) -- antes solo se centraba el nombre de la
+    // 1ª línea, y el detalle se quedaba pegado a la izquierda igual que en un plato normal.
+    const belowLineClass = esNotaInformativa ? 'item-below-line item-below-line-nota' : 'item-below-line';
+
     return `
     <div class="item-row">
         ${topLineHtml}
-        <div class="item-below-line" ${clickAction} ${clickableStyle}>
+        <div class="${belowLineClass}" ${clickAction} ${clickableStyle}>
             ${detailLineHtml}
             ${secondaryLineHtml}
             <div class="alergenos-list">${alergenosHtml}</div>
