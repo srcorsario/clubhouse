@@ -80,10 +80,17 @@ img.header-logo[src*="logo-clubhouse.png"] {
     flex: 1;
 }
 
-/* NUEVO: El logo de la derecha se define con tamaño estándar (24px) */
+/* MODIFICADO (8 septiembre): negro.png (el toro) trae bastante margen en blanco alrededor del
+   propio dibujo dentro del PNG (el dibujo real solo ocupa ~85% del alto del lienzo), mientras
+   que logo-clubhouse.png tiene el dibujo a sangre (ocupa el 100% de su lienzo). Con la misma
+   altura de imagen (24px) el toro se veía visualmente más pequeño que el logo de la izquierda,
+   aunque el <img> midiera lo mismo. Subido a 56px para que el DIBUJO del toro (no el lienzo)
+   quede a la misma altura visual que el logo de Club House a 48px. Si se reemplaza este archivo
+   por otro con menos/más margen interno, puede que este número necesite reajustarse.
+*/
 img.header-logo[src*="negro.png"] {
-    height: 24px;
-    max-height: 24px;
+    height: 56px;
+    max-height: 56px;
 }
 
 #language-selector { 
