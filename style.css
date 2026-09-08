@@ -456,11 +456,12 @@ img.header-logo[src*="negro.png"] {
     line-height: 1; 
 }
 
-.sub-category-title { 
-    margin-top: 30px; 
-    padding-top: 10px; 
-    border-top: 2px solid #eee; 
-    font-size: 20px; 
+.sub-category-title {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 2px solid #eee;
+    font-size: 20px;
+    text-align: center;
 }
 
 /* NUEVO: Estilos estructurales del Skeleton Loader para simular inmediatez de datos con baja cobertura móvil */

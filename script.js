@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.4.1-clubhouse';
+const APP_VERSION = 'v1.4.2-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -238,7 +238,7 @@ const PRICE_HEADER_LABELS = {
 // sin gluten", ID 1105) que no son un plato en sí y se pintan centradas a todo el ancho de la
 // fila, SIN reservar la columna de precio (ni siquiera vacía) al lado. De momento son casos muy
 // puntuales, así que basta con listar aquí sus IDs a mano según los vaya indicando el usuario.
-const NOTAS_INFORMATIVAS_IDS = [1105];
+const NOTAS_INFORMATIVAS_IDS = [1105, 1703, 1705, 2101];
 
 // REESCRITO: antes se descargaban las 26 columnas de nombre + info de golpe en un único
 // fetch (~470 KB con los datos actuales). Ahora se hace en 3 niveles de prioridad:
