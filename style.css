@@ -197,6 +197,18 @@ img.header-logo[src*="negro.png"] {
     margin-top: 4px;
 }
 
+/* NUEVO (8 septiembre): "notas informativas" (ver NOTAS_INFORMATIVAS_IDS en script.js) — sin
+   caja de precio en la fila, así que se centran de verdad a todo el ancho en vez de quedar
+   pegadas a la izquierda por el flex:1 normal de .name-selected. */
+.item-top-line-nota {
+    justify-content: center;
+}
+.nota-informativa-texto {
+    flex: none;
+    width: 100%;
+    text-align: center;
+}
+
 .name-selected {
     font-weight: 700;
     font-size: 17px;
