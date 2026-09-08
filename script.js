@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.7.0-clubhouse';
+const APP_VERSION = 'v1.8.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -188,6 +188,14 @@ let categoriesList = [
     {
         id: 'cavas',
         ES: 'Cavas & Champagne', EN: 'Cava & Champagne', DE: 'Cava & Champagne', FR: 'Cava & Champagne', IT: 'Cava & Champagne'
+    },
+    {
+        // NUEVO (8 septiembre): última pestaña, al final de todas. A diferencia del resto, no
+        // tiene platos (no hay rango de IDs asociado a propósito, no hace falta añadirla a
+        // CATEGORY_RANGES/SUBCATEGORIAS_RANGES): es una página fija de contenido informativo
+        // (leyenda de iconos de alérgenos + aviso), ver renderMenu().
+        id: 'alergenos',
+        ES: 'Alérgenos e Intolerancias', EN: 'Allergens & Intolerances', DE: 'Allergene & Unverträglichkeiten', FR: 'Allergènes & Intolérances', IT: 'Allergeni e Intolleranze'
     }
 ];
 // NOTA: si el idioma actual del cliente no está en un objeto de arriba (solo se han escrito
@@ -288,6 +296,60 @@ const PRICE_HEADER_LABELS = {
 // fila, SIN reservar la columna de precio (ni siquiera vacía) al lado. De momento son casos muy
 // puntuales, así que basta con listar aquí sus IDs a mano según los vaya indicando el usuario.
 const NOTAS_INFORMATIVAS_IDS = [1105, 1703, 1705, 2101];
+
+// NUEVO (8 septiembre): leyenda de la pestaña fija "Alérgenos e Intolerancias" (última pestaña,
+// sin platos). "code" es el nombre exacto del archivo en imagenes/alergenos/ (ya usado por cada
+// plato en generateItemHtml, ver alergenosHtml) -- se reutilizan los mismos 16 iconos, no hace
+// falta subir ninguno nuevo. Orden y agrupación en 2 columnas iguales a la imagen de referencia
+// que dio el usuario (carta impresa): columna izquierda = alérgenos "de siempre" + los 2 tipos
+// de plato al final; columna derecha = el resto.
+const ALERGENOS_INFO_COL_IZQUIERDA = [
+    { code: 'GLUTEN', ES: 'Gluten', EN: 'Gluten', DE: 'Gluten', FR: 'Gluten', IT: 'Glutine' },
+    { code: 'LACTOSA', ES: 'Lactosa', EN: 'Lactose', DE: 'Laktose', FR: 'Lactose', IT: 'Lattosio' },
+    { code: 'FRUTOSCASCARA', ES: 'Frutos de Cáscara', EN: 'Tree Nuts', DE: 'Schalenfrüchte', FR: 'Fruits à Coque', IT: 'Frutta a Guscio' },
+    { code: 'SULFITOS', ES: 'Sulfitos', EN: 'Sulphites', DE: 'Sulfite', FR: 'Sulfites', IT: 'Solfiti' },
+    { code: 'HUEVO', ES: 'Huevo', EN: 'Egg', DE: 'Ei', FR: 'Œuf', IT: 'Uovo' },
+    { code: 'MOLUSCO', ES: 'Molusco', EN: 'Molluscs', DE: 'Weichtiere', FR: 'Mollusques', IT: 'Molluschi' },
+    { code: 'PESCADO', ES: 'Pescado', EN: 'Fish', DE: 'Fisch', FR: 'Poisson', IT: 'Pesce' },
+    { code: 'VEGETARIANO', ES: 'Plato Vegetariano', EN: 'Vegetarian Dish', DE: 'Vegetarisches Gericht', FR: 'Plat Végétarien', IT: 'Piatto Vegetariano' },
+    { code: 'VEGANO', ES: 'Plato Vegano', EN: 'Vegan Dish', DE: 'Veganes Gericht', FR: 'Plat Végétalien', IT: 'Piatto Vegano' }
+];
+const ALERGENOS_INFO_COL_DERECHA = [
+    { code: 'SOJA', ES: 'Soja', EN: 'Soy', DE: 'Soja', FR: 'Soja', IT: 'Soia' },
+    { code: 'SESAMO', ES: 'Sésamo', EN: 'Sesame', DE: 'Sesam', FR: 'Sésame', IT: 'Sesamo' },
+    { code: 'ALTRAMUCES', ES: 'Altramuces', EN: 'Lupin', DE: 'Lupinen', FR: 'Lupin', IT: 'Lupini' },
+    { code: 'MOSTAZA', ES: 'Mostaza', EN: 'Mustard', DE: 'Senf', FR: 'Moutarde', IT: 'Senape' },
+    { code: 'CACAHUETE', ES: 'Cacahuete', EN: 'Peanuts', DE: 'Erdnüsse', FR: 'Arachides', IT: 'Arachidi' },
+    { code: 'CRUSTACEO', ES: 'Crustáceo', EN: 'Crustaceans', DE: 'Krebstiere', FR: 'Crustacés', IT: 'Crostacei' },
+    { code: 'APIO', ES: 'Apio', EN: 'Celery', DE: 'Sellerie', FR: 'Céleri', IT: 'Sedano' }
+];
+// Frase de aviso debajo de la leyenda -- propuesta por Claude (el usuario pidió que se
+// redactara una), pendiente de que la confirme o la sustituya por un texto propio.
+const ALERGENOS_AVISO_TEXTO = {
+    ES: 'Si padece alguna alergia o intolerancia alimentaria, por favor infórmenos antes de realizar su pedido. Estaremos encantados de ayudarle a elegir las mejores opciones.',
+    EN: 'If you have any food allergy or intolerance, please let us know before placing your order. We will be happy to help you choose the best options.',
+    DE: 'Wenn Sie an einer Lebensmittelallergie oder -unverträglichkeit leiden, informieren Sie uns bitte vor der Bestellung. Wir helfen Ihnen gerne bei der Auswahl der besten Optionen.',
+    FR: 'Si vous souffrez d\'une allergie ou d\'une intolérance alimentaire, merci de nous en informer avant de passer commande. Nous serons heureux de vous aider à choisir les meilleures options.',
+    IT: 'Se soffre di un\'allergia o intolleranza alimentare, vi preghiamo di avvisarci prima di ordinare. Saremo lieti di aiutarvi a scegliere le opzioni migliori.'
+};
+
+// NUEVO: pinta la página fija de la pestaña "Alérgenos e Intolerancias" -- 2 columnas de
+// icono+texto (mismos iconos que ya usa cada plato en imagenes/alergenos/) más la frase de
+// aviso debajo. No depende de allData/CATEGORY_RANGES porque no es una lista de platos.
+function generateAlergenosPageHtml() {
+    const renderCol = (items) => items.map(a => {
+        const label = a[currentLang] || a['EN'] || a['ES'];
+        return `<div class="alergeno-info-row"><img src="imagenes/alergenos/${a.code}.webp" loading="lazy" onerror="this.style.display='none'"><span>${label}</span></div>`;
+    }).join('');
+    const aviso = ALERGENOS_AVISO_TEXTO[currentLang] || ALERGENOS_AVISO_TEXTO.EN || ALERGENOS_AVISO_TEXTO.ES;
+    return `<div class="alergenos-page">
+        <div class="alergenos-page-columns">
+            <div class="alergenos-page-col">${renderCol(ALERGENOS_INFO_COL_IZQUIERDA)}</div>
+            <div class="alergenos-page-col">${renderCol(ALERGENOS_INFO_COL_DERECHA)}</div>
+        </div>
+        <p class="alergenos-page-aviso">${aviso}</p>
+    </div>`;
+}
 
 // REESCRITO: antes se descargaban las 26 columnas de nombre + info de golpe en un único
 // fetch (~470 KB con los datos actuales). Ahora se hace en 3 niveles de prioridad:
@@ -970,8 +1032,15 @@ function renderMenu() {
     const catName = catObj ? (catObj[currentLang] || catObj['EN'] || catObj['ES']) : "";
     const translatedTitle = currentLang === 'ES' ? catName : `${catName} - ${catObj['ES']}`;
      
-    if (title) title.innerHTML = `${translatedTitle} <span style="font-size: 0.4em; opacity: 0.5; font-weight: normal; margin-left: 10px;">${APP_VERSION}</span>`; 
+    if (title) title.innerHTML = `${translatedTitle} <span style="font-size: 0.4em; opacity: 0.5; font-weight: normal; margin-left: 10px;">${APP_VERSION}</span>`;
     if (grid) grid.innerHTML = '';
+
+    // NUEVO (8 septiembre): "Alérgenos e Intolerancias" es una página fija de contenido, no una
+    // lista de platos -- se pinta aparte y se sale antes de tocar allData/CATEGORY_RANGES.
+    if (currentCat === 'alergenos') {
+        if (grid) grid.innerHTML = generateAlergenosPageHtml();
+        return;
+    }
 
     const filtered = allData.filter(item => {
         return isItemInCategory(item.id, currentCat) && item.activa === 'SI' && (item.id % 1000 !== 0);
