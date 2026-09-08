@@ -198,11 +198,48 @@ img.header-logo[src*="negro.png"] {
     margin-top: 2px; 
 }
 
-.price-box { 
-    font-weight: 700; 
-    font-size: 17px; 
-    margin-left: 15px; 
-    white-space: nowrap; 
+.price-box {
+    font-weight: 700;
+    font-size: 17px;
+    margin-left: 15px;
+    white-space: nowrap;
+}
+
+/* NUEVO (8 septiembre): "1/2 ración" — cabecera de columnas por categoría y celdas de precio
+   dobles por plato (ver PRICE_HEADER_LABELS / catShowsDual en script.js). Solo aparecen en las
+   pestañas donde algún plato tiene precio de media ración; el resto de pestañas no cambia.
+   La cabecera reutiliza literalmente las mismas clases .price-box.price-box-dual que cada
+   fila (ver generateItemHtml) para que las dos columnas queden pixel a pixel alineadas: mismo
+   spacer flex:1 a la izquierda, mismo ancho/margen en cada celda de precio. */
+.price-columns-header {
+    display: flex;
+    align-items: center;
+    padding: 0 0 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.price-columns-spacer { flex: 1; }
+
+.price-box-dual {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.price-cell {
+    display: inline-block;
+    width: 58px;
+    text-align: right;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-left: 15px;
+    white-space: nowrap;
+}
+.price-box-header .price-cell {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--grey);
 }
 
 /* NUEVO: miniatura fija y siempre visible para el plato especial ID 12990 (vino "El Tenista"

@@ -9,7 +9,7 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpVWFPsuWkDT5w
 // se puede pedir con &idiomas=xx para traer solo las columnas que hacen falta, y siempre
 // devuelve el contenido real de la hoja. CSV_URL se mantiene como último recurso si este
 // endpoint fallara (p.ej. problema de CORS puntual).
-const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwfQmS5FqOqRaIptpnru0u9RU4_4TixeeTcz-TUFimsIa_Svoex6IkFbwmpa6-KOw-bdw/exec';
+const LIVE_CSV_ENDPOINT = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
 // NUEVO: idiomas que se precargan en segundo plano justo después del primer render (además
 // del idioma del cliente, que siempre va primero). El resto de los 26 solo se piden bajo
 // demanda, cuando alguien los elige en el selector "Más...".
@@ -20,8 +20,8 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 // justificación izquierda como el resto de idiomas — ver updateLanguageUI().
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
-const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfQmS5FqOqRaIptpnru0u9RU4_4TixeeTcz-TUFimsIa_Svoex6IkFbwmpa6-KOw-bdw/exec';
-const APP_VERSION = 'v1.2.0-clubhouse';
+const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
+const APP_VERSION = 'v1.3.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -223,6 +223,15 @@ const EXTRA_RANGES = {
         start: 5001, end: 5099,
         ES: 'Guarnición Extra', EN: 'Extra Side Dishes', DE: 'Extra-Beilagen', FR: 'Garnitures Supplémentaires', IT: 'Contorni Extra'
     }
+};
+
+// NUEVO (8 septiembre): etiquetas de la cabecera "1/2 | Entero" que aparece encima de una
+// categoría en cuanto ALGÚN plato de esa pestaña tiene precio de media ración (item.precioMedia,
+// ver PRECIO_MEDIA en parseCSV/Código.gs). Mismo patrón de fallback que categoriesList/EXTRA_RANGES:
+// solo se traduce a los 5 idiomas principales, el resto cae en EN y luego ES.
+const PRICE_HEADER_LABELS = {
+    half: { ES: '1/2', EN: 'Half', DE: 'Halb', FR: '1/2', IT: '1/2' },
+    full: { ES: 'Entero', EN: 'Whole', DE: 'Ganz', FR: 'Entier', IT: 'Intero' }
 };
 
 // REESCRITO: antes se descargaban las 26 columnas de nombre + info de golpe en un único
@@ -633,6 +642,11 @@ function parseCSV(text) {
         const item = {
             id: idVal,
             precio: (get('PRECIO') || '0').replace(',', '.'),
+            // NUEVO (8 septiembre): precio opcional de "1/2 ración" — '' si el plato no la tiene
+            // (a diferencia de precio, aquí no se sustituye por '0', para poder distinguir "sin
+            // media ración" de "media ración gratis"). Requiere que Código.gs sirva también la
+            // columna PRECIO_MEDIA (ver COLUMNAS_BASE en el propio Código.gs).
+            precioMedia: (get('PRECIO_MEDIA') || '').replace(',', '.'),
             activa: (get('ACTIVA') || '').toUpperCase(),
             carpeta: get('CARPETA') || '',
             archivo: get('ARCHIVO_FOTO') || '',
@@ -904,9 +918,20 @@ function renderMenu() {
     if (title) title.innerHTML = `${translatedTitle} <span style="font-size: 0.4em; opacity: 0.5; font-weight: normal; margin-left: 10px;">${APP_VERSION}</span>`; 
     if (grid) grid.innerHTML = '';
 
-    const filtered = allData.filter(item => { 
-        return isItemInCategory(item.id, currentCat) && item.activa === 'SI' && (item.id % 1000 !== 0); 
+    const filtered = allData.filter(item => {
+        return isItemInCategory(item.id, currentCat) && item.activa === 'SI' && (item.id % 1000 !== 0);
     });
+
+    // NUEVO (8 septiembre): si ALGÚN plato visible de esta pestaña tiene precio de media
+    // ración, se pinta una fila de cabecera "1/2 | Entero" arriba de la lista y cada plato
+    // muestra sus dos precios en columna (ver generateItemHtml). Si ninguno la tiene, la
+    // pestaña se ve exactamente igual que antes (una sola columna de precio).
+    const catShowsDual = filtered.some(item => parseFloat(item.precioMedia) > 0);
+    if (catShowsDual && grid) {
+        const labelHalf = PRICE_HEADER_LABELS.half[currentLang] || PRICE_HEADER_LABELS.half.EN || PRICE_HEADER_LABELS.half.ES;
+        const labelFull = PRICE_HEADER_LABELS.full[currentLang] || PRICE_HEADER_LABELS.full.EN || PRICE_HEADER_LABELS.full.ES;
+        grid.innerHTML += `<div class="price-columns-header"><span class="price-columns-spacer"></span><div class="price-box-dual price-box-header"><span class="price-cell price-cell-half">${labelHalf}</span><span class="price-cell price-cell-full">${labelFull}</span></div></div>`;
+    }
 
     // REESCRITO para Club House: cada pestaña se pinta como lista plana, salvo que tenga un
     // rango "extra" fusionado (ver EXTRA_RANGES) — en ese caso los platos normales van primero
@@ -922,16 +947,16 @@ function renderMenu() {
             const idNum = parseInt(item.id, 10);
             (idNum >= extraInfo.start && idNum <= extraInfo.end ? extras : normales).push(item);
         });
-        normales.forEach(item => { if (grid) grid.innerHTML += generateItemHtml(item); });
+        normales.forEach(item => { if (grid) grid.innerHTML += generateItemHtml(item, false, catShowsDual); });
         if (extras.length > 0 && grid) {
             const titleText = extraInfo[currentLang] || extraInfo['EN'] || extraInfo['ES'];
             const finalTitle = currentLang === 'ES' ? titleText : `${titleText} - ${extraInfo['ES']}`;
             grid.innerHTML += `<h3 class="sub-category-title">${finalTitle}</h3>`;
-            extras.forEach(item => { grid.innerHTML += generateItemHtml(item); });
+            extras.forEach(item => { grid.innerHTML += generateItemHtml(item, false, catShowsDual); });
         }
     } else {
         filtered.forEach(item => {
-            if (grid) grid.innerHTML += generateItemHtml(item);
+            if (grid) grid.innerHTML += generateItemHtml(item, false, catShowsDual);
         });
     }
 }
@@ -942,7 +967,11 @@ function utf8ToB64(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64ToUtf8(str) { return decodeURIComponent(escape(atob(str))); }
 
 // MODIFICADO: Lógica para incluir el icono de información dinámico y el manejo del popup de preguntas/respuestas
-function generateItemHtml(item, isGuarni = false) {
+// NUEVO (8 septiembre): 3er parámetro catShowsDual — true si la pestaña actual tiene al menos
+// un plato con precio de media ración (ver renderMenu). En ese caso este plato pinta SIEMPRE
+// las dos columnas de precio (1/2 y Entero), aunque él en concreto no tenga media ración (se
+// deja esa celda en blanco), para que la cabecera de columnas cuadre en todas las filas.
+function generateItemHtml(item, isGuarni = false, catShowsDual = false) {
     // MODIFICADO (paridad con US Open): además del "Nombre // Detalle" de siempre (una sola
     // pareja de "//", usado para la uva de los vinos), ahora se admiten VARIAS palabras entre
     // "//.../ /" seguidas — cada una es una "opción" independiente (sabor, ingrediente...) que
@@ -977,7 +1006,9 @@ function generateItemHtml(item, isGuarni = false) {
     const currentOpcionesTexto = opcionesActivasTexto(currentData);
     const secondaryOpcionesTexto = opcionesActivasTexto(secondaryData);
 
-    const price = (isGuarni && parseInt(item.id) < 6100) ? '' : (parseFloat(item.precio) > 0 ? `${parseFloat(item.precio).toFixed(2)}€` : ''); 
+    const price = (isGuarni && parseInt(item.id) < 6100) ? '' : (parseFloat(item.precio) > 0 ? `${parseFloat(item.precio).toFixed(2)}€` : '');
+    // NUEVO (8 septiembre): precio de "1/2 ración" de ESTE plato en concreto ('' si no tiene).
+    const priceMedia = parseFloat(item.precioMedia) > 0 ? `${parseFloat(item.precioMedia).toFixed(2)}€` : '';
     const alergenosHtml = item.alergenos.map(a => `<img src="imagenes/alergenos/${a}.webp" loading="lazy" onerror="this.style.display='none'">`).join('');  
      
     let photoIcon = ''; 
@@ -1023,9 +1054,17 @@ function generateItemHtml(item, isGuarni = false) {
     // CORREGIDO: el nombre del plato debe mostrarse SIEMPRE; antes, cuando había foto, se sustituía por completo por los iconos
     const infoPlacement = `${currentData.name}${photoIcon ? ' ' + photoIcon : ''}${infoIconHtml ? ' ' + infoIconHtml : ''}`;
 
-    return ` 
-    <div class="item-row"> 
-        <div class="item-content" ${clickAction} ${clickableStyle}> 
+    // NUEVO (8 septiembre): con columnas dobles activas en la pestaña, cada fila pinta las dos
+    // celdas de precio (1/2 y Entero) alineadas con la cabecera de renderMenu; si este plato en
+    // concreto no tiene media ración se deja un guion en esa celda. Sin columnas dobles en la
+    // pestaña, se mantiene el price-box de siempre (un único precio).
+    const priceBoxHtml = catShowsDual
+        ? `<div class="price-box price-box-dual"><span class="price-cell price-cell-half">${priceMedia || '–'}</span><span class="price-cell price-cell-full">${price}</span></div>`
+        : `<div class="price-box">${price}</div>`;
+
+    return `
+    <div class="item-row">
+        <div class="item-content" ${clickAction} ${clickableStyle}>
             <span class="name-selected">
                 ${infoPlacement}
                 ${currentOpcionesTexto ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic; display:block; margin-top:2px;">${currentOpcionesTexto}</small>` : ''}
@@ -1035,9 +1074,9 @@ function generateItemHtml(item, isGuarni = false) {
                 ${secondaryData.name}
                 ${secondaryOpcionesTexto ? `<br><small style="font-size:0.85em; opacity:0.8; font-style:italic;">${secondaryOpcionesTexto}</small>` : ''}
             </span>` : ''}
-            <div class="alergenos-list">${alergenosHtml}</div> 
-        </div> 
-        <div class="price-box">${price}</div> 
+            <div class="alergenos-list">${alergenosHtml}</div>
+        </div>
+        ${priceBoxHtml}
         ${tenistaThumbHtml}
     </div>`;
 }
