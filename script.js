@@ -21,7 +21,7 @@ const ESSENTIAL_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT'];
 const RTL_LANGS = ['AR'];
 // NUEVO: Se registra la URL actualizada del App Script para las peticiones de sincronización del sistema
 const APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzwOUB9Bb7HbngjGuvqhDPF0JCQsuOfwnqZNsUBzS6TDTrJjuC3ZTTe0N0sZElu1jXrg/exec';
-const APP_VERSION = 'v1.8.0-clubhouse';
+const APP_VERSION = 'v1.9.0-clubhouse';
 // NUEVO (26 agosto, caché local + delta por hash): clave de localStorage donde se guarda la
 // última copia conocida de allData (más un sello de versión de la app) para poder pintar la
 // web al instante en visitas recurrentes, sin esperar a ningún fetch. Ver leerCacheLocal /
@@ -97,23 +97,43 @@ let currentPreloadSession = 0;
 let categoriesList = [
     {
         id: 'sugerencias',
-        ES: 'Sugerencias', EN: "Chef's Suggestions", DE: 'Empfehlungen des Chefs', FR: 'Suggestions du Chef', IT: 'Suggerimenti dello Chef'
+        ES: 'Sugerencias', EN: "Chef's Suggestions", DE: 'Empfehlungen des Chefs', FR: 'Suggestions du Chef', IT: 'Suggerimenti dello Chef',
+        RU: 'Рекомендации шеф-повара', NL: 'Aanbevelingen van de Chef', PL: 'Sugestie Szefa Kuchni', SV: 'Kockens Förslag', NO: 'Kokkens Forslag',
+        DA: 'Kokkens Forslag', FI: 'Kokin Suositukset', PT: 'Sugestões do Chef', RO: 'Recomandările Bucătarului-Șef', HU: 'A Séf Ajánlata',
+        CS: 'Doporučení Šéfkuchaře', EL: 'Προτάσεις του Σεφ', TR: 'Şefin Önerileri', AR: 'اقتراحات الشيف', ZH: '主厨推荐', JA: 'シェフのおすすめ',
+        KO: '셰프의 추천', CA: 'Suggeriments del Xef', EU: 'Sukaldariaren Gomendioak', GL: 'Suxestións do Chef', VA: 'Suggeriments del Xef'
     },
     {
         id: 'tostadas',
-        ES: 'Tostadas', EN: 'Toasts', DE: 'Toasts', FR: 'Toasts', IT: 'Toast'
+        ES: 'Tostadas', EN: 'Toasts', DE: 'Toasts', FR: 'Toasts', IT: 'Toast',
+        RU: 'Тосты', NL: 'Toosties', PL: 'Tosty', SV: 'Rostat Bröd', NO: 'Ristet Brød',
+        DA: 'Ristet Brød', FI: 'Paahtoleivät', PT: 'Torradas', RO: 'Toasturi', HU: 'Pirítósok',
+        CS: 'Toasty', EL: 'Τοστ', TR: 'Tostlar', AR: 'التوست', ZH: '吐司', JA: 'トースト',
+        KO: '토스트', CA: 'Torrades', EU: 'Ogi Txigortuak', GL: 'Torradas', VA: 'Torrades'
     },
     {
         id: 'creps',
-        ES: 'Creps', EN: 'Crêpes', DE: 'Crêpes', FR: 'Crêpes', IT: 'Crêpe'
+        ES: 'Creps', EN: 'Crêpes', DE: 'Crêpes', FR: 'Crêpes', IT: 'Crêpe',
+        RU: 'Блины', NL: 'Crêpes', PL: 'Naleśniki', SV: 'Crêpes', NO: 'Crêpes',
+        DA: 'Crêpes', FI: 'Crêpet', PT: 'Crepes', RO: 'Clătite', HU: 'Palacsinta',
+        CS: 'Palačinky', EL: 'Κρέπες', TR: 'Krep', AR: 'كريب', ZH: '可丽饼', JA: 'クレープ',
+        KO: '크레페', CA: 'Crêpes', EU: 'Krepeak', GL: 'Crepes', VA: 'Crêpes'
     },
     {
         id: 'bocadillos',
-        ES: 'Bocadillos', EN: 'Baguette Sandwiches', DE: 'Baguette-Sandwiches', FR: 'Sandwichs Baguette', IT: 'Panini Baguette'
+        ES: 'Bocadillos', EN: 'Baguette Sandwiches', DE: 'Baguette-Sandwiches', FR: 'Sandwichs Baguette', IT: 'Panini Baguette',
+        RU: 'Багеты-сэндвичи', NL: 'Baguette Sandwiches', PL: 'Kanapki Bagietkowe', SV: 'Baguettesmörgåsar', NO: 'Baguettesmørbrød',
+        DA: 'Baguettesandwich', FI: 'Patonkivoileivät', PT: 'Sanduíches de Baguete', RO: 'Sandvișuri Baghetă', HU: 'Bagett Szendvicsek',
+        CS: 'Bagetové Sendviče', EL: 'Σάντουιτς Μπαγκέτα', TR: 'Baget Sandviçler', AR: 'سندويشات الباغيت', ZH: '法棍三明治', JA: 'バゲットサンド',
+        KO: '바게트 샌드위치', CA: 'Entrepans de Baguet', EU: 'Baguette Ogitartekoak', GL: 'Bocadillos de Baguete', VA: 'Entrepans de Baguet'
     },
     {
         id: 'sandwich',
-        ES: 'Sandwich', EN: 'Sandwiches', DE: 'Sandwiches', FR: 'Sandwichs', IT: 'Sandwich'
+        ES: 'Sandwich', EN: 'Sandwiches', DE: 'Sandwiches', FR: 'Sandwichs', IT: 'Sandwich',
+        RU: 'Сэндвичи', NL: 'Sandwiches', PL: 'Kanapki', SV: 'Smörgåsar', NO: 'Smørbrød',
+        DA: 'Sandwich', FI: 'Voileivät', PT: 'Sandes', RO: 'Sandvișuri', HU: 'Szendvicsek',
+        CS: 'Sendviče', EL: 'Σάντουιτς', TR: 'Sandviçler', AR: 'السندويتشات', ZH: '三明治', JA: 'サンドイッチ',
+        KO: '샌드위치', CA: 'Sandvitxos', EU: 'Ogitartekoak', GL: 'Sandwiches', VA: 'Sandvitxos'
     },
     {
         // MODIFICADO (8 septiembre): pestaña renombrada de "Entrantes" a "Para Picar" a
@@ -121,73 +141,137 @@ let categoriesList = [
         // adelante cómo aplicar esto en el resto de idiomas (EN/DE/FR/IT se dejan igual
         // que antes hasta que lo indique).
         id: 'entrantes',
-        ES: 'Para Picar', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti'
+        ES: 'Para Picar', EN: 'Starters', DE: 'Vorspeisen', FR: 'Entrées', IT: 'Antipasti',
+        RU: 'Закуски', NL: 'Voorgerechten', PL: 'Przystawki', SV: 'Förrätter', NO: 'Forretter',
+        DA: 'Forretter', FI: 'Alkuruoat', PT: 'Entradas', RO: 'Aperitive', HU: 'Előételek',
+        CS: 'Předkrmy', EL: 'Ορεκτικά', TR: 'Başlangıçlar', AR: 'المقبلات', ZH: '前菜', JA: '前菜',
+        KO: '애피타이저', CA: 'Entrants', EU: 'Hastekoak', GL: 'Entrantes', VA: 'Entrants'
     },
     {
         id: 'pizzas',
-        ES: 'Pizzas', EN: 'Pizzas', DE: 'Pizzen', FR: 'Pizzas', IT: 'Pizze'
+        ES: 'Pizzas', EN: 'Pizzas', DE: 'Pizzen', FR: 'Pizzas', IT: 'Pizze',
+        RU: 'Пицца', NL: "Pizza's", PL: 'Pizze', SV: 'Pizzor', NO: 'Pizzaer',
+        DA: 'Pizzaer', FI: 'Pizzat', PT: 'Pizzas', RO: 'Pizza', HU: 'Pizzák',
+        CS: 'Pizzy', EL: 'Πίτσες', TR: 'Pizzalar', AR: 'البيتزا', ZH: '披萨', JA: 'ピザ',
+        KO: '피자', CA: 'Pizzes', EU: 'Pizzak', GL: 'Pizzas', VA: 'Pizzes'
     },
     {
         id: 'ensaladas',
-        ES: 'Ensaladas', EN: 'Salads', DE: 'Salate', FR: 'Salades', IT: 'Insalate'
+        ES: 'Ensaladas', EN: 'Salads', DE: 'Salate', FR: 'Salades', IT: 'Insalate',
+        RU: 'Салаты', NL: 'Salades', PL: 'Sałatki', SV: 'Sallader', NO: 'Salater',
+        DA: 'Salater', FI: 'Salaatit', PT: 'Saladas', RO: 'Salate', HU: 'Saláták',
+        CS: 'Saláty', EL: 'Σαλάτες', TR: 'Salatalar', AR: 'السلطات', ZH: '沙拉', JA: 'サラダ',
+        KO: '샐러드', CA: 'Amanides', EU: 'Entsaladak', GL: 'Ensaladas', VA: 'Amanides'
     },
     {
         id: 'hamburguesas',
-        ES: 'Hamburguesas', EN: 'Burgers', DE: 'Burger', FR: 'Burgers', IT: 'Hamburger'
+        ES: 'Hamburguesas', EN: 'Burgers', DE: 'Burger', FR: 'Burgers', IT: 'Hamburger',
+        RU: 'Бургеры', NL: 'Burgers', PL: 'Burgery', SV: 'Hamburgare', NO: 'Burgere',
+        DA: 'Burgere', FI: 'Hampurilaiset', PT: 'Hambúrgueres', RO: 'Burgeri', HU: 'Hamburgerek',
+        CS: 'Hamburgery', EL: 'Μπέργκερ', TR: 'Burgerler', AR: 'البرغر', ZH: '汉堡', JA: 'ハンバーガー',
+        KO: '버거', CA: 'Hamburgueses', EU: 'Hanburgesak', GL: 'Hamburguesas', VA: 'Hamburgueses'
     },
     {
         id: 'principales',
-        ES: 'Platos Principales', EN: 'Main Courses', DE: 'Hauptgerichte', FR: 'Plats Principaux', IT: 'Piatti Principali'
+        ES: 'Platos Principales', EN: 'Main Courses', DE: 'Hauptgerichte', FR: 'Plats Principaux', IT: 'Piatti Principali',
+        RU: 'Основные блюда', NL: 'Hoofdgerechten', PL: 'Dania Główne', SV: 'Huvudrätter', NO: 'Hovedretter',
+        DA: 'Hovedretter', FI: 'Pääruoat', PT: 'Pratos Principais', RO: 'Feluri Principale', HU: 'Főételek',
+        CS: 'Hlavní Jídla', EL: 'Κυρίως Πιάτα', TR: 'Ana Yemekler', AR: 'الأطباق الرئيسية', ZH: '主菜', JA: 'メインディッシュ',
+        KO: '메인 요리', CA: 'Plats Principals', EU: 'Plater Nagusiak', GL: 'Pratos Principais', VA: 'Plats Principals'
     },
     {
         id: 'ninos',
-        ES: 'Niños', EN: 'Kids', DE: 'Kinder', FR: 'Enfants', IT: 'Bambini'
+        ES: 'Niños', EN: 'Kids', DE: 'Kinder', FR: 'Enfants', IT: 'Bambini',
+        RU: 'Детское меню', NL: 'Kinderen', PL: 'Dla Dzieci', SV: 'Barn', NO: 'Barn',
+        DA: 'Børn', FI: 'Lapset', PT: 'Crianças', RO: 'Copii', HU: 'Gyerekeknek',
+        CS: 'Pro Děti', EL: 'Παιδικά', TR: 'Çocuklar', AR: 'الأطفال', ZH: '儿童餐', JA: 'キッズメニュー',
+        KO: '어린이 메뉴', CA: 'Nens', EU: 'Umeak', GL: 'Nenos', VA: 'Xiquets'
     },
     {
         id: 'postres',
-        ES: 'Postres', EN: 'Desserts', DE: 'Desserts', FR: 'Desserts', IT: 'Dolci'
+        ES: 'Postres', EN: 'Desserts', DE: 'Desserts', FR: 'Desserts', IT: 'Dolci',
+        RU: 'Десерты', NL: 'Desserts', PL: 'Desery', SV: 'Efterrätter', NO: 'Desserter',
+        DA: 'Desserter', FI: 'Jälkiruoat', PT: 'Sobremesas', RO: 'Deserturi', HU: 'Desszertek',
+        CS: 'Dezerty', EL: 'Επιδόρπια', TR: 'Tatlılar', AR: 'الحلويات', ZH: '甜点', JA: 'デザート',
+        KO: '디저트', CA: 'Postres', EU: 'Postreak', GL: 'Sobremesas', VA: 'Postres'
     },
     {
         id: 'cafes',
-        ES: 'Cafés e Infusiones', EN: 'Coffees & Teas', DE: 'Kaffee & Tee', FR: 'Cafés & Infusions', IT: 'Caffè e Tisane'
+        ES: 'Cafés e Infusiones', EN: 'Coffees & Teas', DE: 'Kaffee & Tee', FR: 'Cafés & Infusions', IT: 'Caffè e Tisane',
+        RU: 'Кофе и чай', NL: 'Koffie & Thee', PL: 'Kawa i Herbaty', SV: 'Kaffe & Te', NO: 'Kaffe & Te',
+        DA: 'Kaffe & Te', FI: 'Kahvit & Teet', PT: 'Cafés e Infusões', RO: 'Cafele și Ceaiuri', HU: 'Kávék és Teák',
+        CS: 'Káva a Čaje', EL: 'Καφέδες & Ροφήματα', TR: 'Kahveler ve Çaylar', AR: 'القهوة والشاي', ZH: '咖啡与茶', JA: 'コーヒーとお茶',
+        KO: '커피 & 차', CA: 'Cafès i Infusions', EU: 'Kafeak eta Infusioak', GL: 'Cafés e Infusións', VA: 'Cafès i Infusions'
     },
     {
         id: 'bebidas',
-        ES: 'Bebidas', EN: 'Drinks', DE: 'Getränke', FR: 'Boissons', IT: 'Bibite'
+        ES: 'Bebidas', EN: 'Drinks', DE: 'Getränke', FR: 'Boissons', IT: 'Bibite',
+        RU: 'Напитки', NL: 'Dranken', PL: 'Napoje', SV: 'Drycker', NO: 'Drikke',
+        DA: 'Drikkevarer', FI: 'Juomat', PT: 'Bebidas', RO: 'Băuturi', HU: 'Italok',
+        CS: 'Nápoje', EL: 'Ποτά', TR: 'İçecekler', AR: 'المشروبات', ZH: '饮料', JA: 'ドリンク',
+        KO: '음료', CA: 'Begudes', EU: 'Edariak', GL: 'Bebidas', VA: 'Begudes'
     },
     {
         // NUEVO (8 septiembre): pestaña nueva insertada entre "Bebidas" y "Cervezas" a petición
         // del usuario. Con 2 subcategorías propias (ver SUBCATEGORIAS_RANGES): "Zumos Saludables"
         // y "Botellas Saludables".
         id: 'bebidas_saludables',
-        ES: 'Bebidas Saludables', EN: 'Healthy Drinks', DE: 'Gesunde Getränke', FR: 'Boissons Saines', IT: 'Bevande Salutari'
+        ES: 'Bebidas Saludables', EN: 'Healthy Drinks', DE: 'Gesunde Getränke', FR: 'Boissons Saines', IT: 'Bevande Salutari',
+        RU: 'Полезные напитки', NL: 'Gezonde Dranken', PL: 'Zdrowe Napoje', SV: 'Hälsosamma Drycker', NO: 'Sunne Drikker',
+        DA: 'Sunde Drikke', FI: 'Terveelliset Juomat', PT: 'Bebidas Saudáveis', RO: 'Băuturi Sănătoase', HU: 'Egészséges Italok',
+        CS: 'Zdravé Nápoje', EL: 'Υγιεινά Ποτά', TR: 'Sağlıklı İçecekler', AR: 'المشروبات الصحية', ZH: '健康饮品', JA: 'ヘルシードリンク',
+        KO: '건강 음료', CA: 'Begudes Saludables', EU: 'Edari Osasungarriak', GL: 'Bebidas Saudables', VA: 'Begudes Saludables'
     },
     {
         id: 'cervezas',
-        ES: 'Cervezas', EN: 'Beers', DE: 'Biere', FR: 'Bières', IT: 'Birre'
+        ES: 'Cervezas', EN: 'Beers', DE: 'Biere', FR: 'Bières', IT: 'Birre',
+        RU: 'Пиво', NL: 'Bieren', PL: 'Piwa', SV: 'Öl', NO: 'Øl',
+        DA: 'Øl', FI: 'Oluet', PT: 'Cervejas', RO: 'Beri', HU: 'Sörök',
+        CS: 'Piva', EL: 'Μπύρες', TR: 'Biralar', AR: 'البيرة', ZH: '啤酒', JA: 'ビール',
+        KO: '맥주', CA: 'Cerveses', EU: 'Garagardoak', GL: 'Cervexas', VA: 'Cerveses'
     },
     {
         // NUEVO (8 septiembre): pestaña nueva insertada entre "Cervezas" y "Vinos Blancos" a
         // petición del usuario. Con 2 subcategorías propias (ver SUBCATEGORIAS_RANGES):
         // "Aperitivos" y "Copas de vino y sangría".
         id: 'aperitivos',
-        ES: 'Aperitivos', EN: 'Aperitifs', DE: 'Aperitifs', FR: 'Apéritifs', IT: 'Aperitivi'
+        ES: 'Aperitivos', EN: 'Aperitifs', DE: 'Aperitifs', FR: 'Apéritifs', IT: 'Aperitivi',
+        RU: 'Аперитивы', NL: 'Aperitieven', PL: 'Aperitify', SV: 'Aperitifer', NO: 'Aperitiffer',
+        DA: 'Aperitiffer', FI: 'Aperitiivit', PT: 'Aperitivos', RO: 'Aperitive', HU: 'Aperitifek',
+        CS: 'Aperitivy', EL: 'Απεριτίφ', TR: 'Aperitifler', AR: 'المقبلات الفاتحة للشهية', ZH: '开胃酒', JA: 'アペリティフ',
+        KO: '아페리티프', CA: 'Aperitius', EU: 'Aperitiboak', GL: 'Aperitivos', VA: 'Aperitius'
     },
     {
         id: 'vinos_blancos',
-        ES: 'Vinos Blancos', EN: 'White Wines', DE: 'Weissweine', FR: 'Vins Blancs', IT: 'Vini Bianchi'
+        ES: 'Vinos Blancos', EN: 'White Wines', DE: 'Weissweine', FR: 'Vins Blancs', IT: 'Vini Bianchi',
+        RU: 'Белые вина', NL: 'Witte Wijnen', PL: 'Białe Wina', SV: 'Vita Viner', NO: 'Hvite Viner',
+        DA: 'Hvidvine', FI: 'Valkoviinit', PT: 'Vinhos Brancos', RO: 'Vinuri Albe', HU: 'Fehérborok',
+        CS: 'Bílá Vína', EL: 'Λευκά Κρασιά', TR: 'Beyaz Şaraplar', AR: 'النبيذ الأبيض', ZH: '白葡萄酒', JA: '白ワイン',
+        KO: '화이트 와인', CA: 'Vins Blancs', EU: 'Ardo Zuriak', GL: 'Viños Brancos', VA: 'Vins Blancs'
     },
     {
         id: 'vinos_rosados',
-        ES: 'Vinos Rosados', EN: 'Rosé Wines', DE: 'Roséweine', FR: 'Vins Rosés', IT: 'Vini Rosati'
+        ES: 'Vinos Rosados', EN: 'Rosé Wines', DE: 'Roséweine', FR: 'Vins Rosés', IT: 'Vini Rosati',
+        RU: 'Розовые вина', NL: 'Rosé Wijnen', PL: 'Wina Różowe', SV: 'Roséviner', NO: 'Roséviner',
+        DA: 'Rosévine', FI: 'Roseeviinit', PT: 'Vinhos Rosés', RO: 'Vinuri Roze', HU: 'Rozé Borok',
+        CS: 'Růžová Vína', EL: 'Ροζέ Κρασιά', TR: 'Roze Şaraplar', AR: 'النبيذ الوردي', ZH: '桃红葡萄酒', JA: 'ロゼワイン',
+        KO: '로제 와인', CA: 'Vins Rosats', EU: 'Ardo Arrosak', GL: 'Viños Rosados', VA: 'Vins Rosats'
     },
     {
         id: 'vinos_tintos',
-        ES: 'Vinos Tintos', EN: 'Red Wines', DE: 'Rotweine', FR: 'Vins Rouges', IT: 'Vini Rossi'
+        ES: 'Vinos Tintos', EN: 'Red Wines', DE: 'Rotweine', FR: 'Vins Rouges', IT: 'Vini Rossi',
+        RU: 'Красные вина', NL: 'Rode Wijnen', PL: 'Czerwone Wina', SV: 'Röda Viner', NO: 'Røde Viner',
+        DA: 'Rødvine', FI: 'Punaviinit', PT: 'Vinhos Tintos', RO: 'Vinuri Roșii', HU: 'Vörösborok',
+        CS: 'Červená Vína', EL: 'Κόκκινα Κρασιά', TR: 'Kırmızı Şaraplar', AR: 'النبيذ الأحمر', ZH: '红葡萄酒', JA: '赤ワイン',
+        KO: '레드 와인', CA: 'Vins Negres', EU: 'Ardo Beltzak', GL: 'Viños Tintos', VA: 'Vins Negres'
     },
     {
         id: 'cavas',
-        ES: 'Cavas & Champagne', EN: 'Cava & Champagne', DE: 'Cava & Champagne', FR: 'Cava & Champagne', IT: 'Cava & Champagne'
+        ES: 'Cavas & Champagne', EN: 'Cava & Champagne', DE: 'Cava & Champagne', FR: 'Cava & Champagne', IT: 'Cava & Champagne',
+        RU: 'Кава и шампанское', NL: 'Cava & Champagne', PL: 'Cava i Szampan', SV: 'Cava & Champagne', NO: 'Cava og Champagne',
+        DA: 'Cava & Champagne', FI: 'Cava & Samppanja', PT: 'Cavas e Champanhe', RO: 'Cava și Șampanie', HU: 'Cava és Pezsgő',
+        CS: 'Cava a Šampaňské', EL: 'Cava & Σαμπάνια', TR: 'Kava ve Şampanya', AR: 'الكافا والشمبانيا', ZH: '卡瓦与香槟', JA: 'カヴァ&シャンパン',
+        KO: '카바 & 샴페인', CA: 'Caves i Xampany', EU: 'Cava eta Xanpaina', GL: 'Cavas e Champán', VA: 'Caves i Xampany'
     },
     {
         // NUEVO (8 septiembre): última pestaña, al final de todas. A diferencia del resto, no
@@ -195,13 +279,18 @@ let categoriesList = [
         // CATEGORY_RANGES/SUBCATEGORIAS_RANGES): es una página fija de contenido informativo
         // (leyenda de iconos de alérgenos + aviso), ver renderMenu().
         id: 'alergenos',
-        ES: 'Alérgenos e Intolerancias', EN: 'Allergens & Intolerances', DE: 'Allergene & Unverträglichkeiten', FR: 'Allergènes & Intolérances', IT: 'Allergeni e Intolleranze'
+        ES: 'Alérgenos e Intolerancias', EN: 'Allergens & Intolerances', DE: 'Allergene & Unverträglichkeiten', FR: 'Allergènes & Intolérances', IT: 'Allergeni e Intolleranze',
+        RU: 'Аллергены и непереносимость', NL: 'Allergenen & Intoleranties', PL: 'Alergeny i Nietolerancje', SV: 'Allergener & Intoleranser', NO: 'Allergener & Intoleranser',
+        DA: 'Allergener & Intolerancer', FI: 'Allergeenit & Intoleranssit', PT: 'Alergénios e Intolerâncias', RO: 'Alergeni și Intoleranțe', HU: 'Allergének és Intoleranciák',
+        CS: 'Alergeny a Intolerance', EL: 'Αλλεργιογόνα & Δυσανεξίες', TR: 'Alerjenler ve İntoleranslar', AR: 'مسببات الحساسية وعدم التحمل', ZH: '过敏原与不耐受', JA: 'アレルゲンと不耐性',
+        KO: '알레르기 유발물질 및 불내증', CA: 'Al·lèrgens i Intoleràncies', EU: 'Alergenoak eta Intolerantziak', GL: 'Alérxenos e Intolerancias', VA: 'Al·lèrgens i Intoleràncies'
     }
 ];
-// NOTA: si el idioma actual del cliente no está en un objeto de arriba (solo se han escrito
-// ES/EN/DE/FR/IT a propósito, los 5 "ESSENTIAL_LANGS"), el propio código de renderCategories()/
-// renderMenu() ya cae a EN y luego a ES automáticamente (c[currentLang] || c['EN'] || c['ES']),
-// así que no hace falta rellenar los 26 idiomas para que la web funcione correctamente.
+// MODIFICADO (8 septiembre): el usuario pidió completar los 26 idiomas en todas las pestañas
+// (antes solo se habían rellenado ES/EN/DE/FR/IT, los 5 "ESSENTIAL_LANGS", y el resto caía en
+// EN/ES por el fallback de renderCategories()/renderMenu() -- c[currentLang] || c['EN'] || c['ES']).
+// Ese fallback se mantiene tal cual por seguridad (por si en el futuro se añade una pestaña
+// nueva sin completar los 26 de inmediato), pero ya no debería activarse en el uso normal.
 
 // NUEVO (Club House): rangos de ID de plato que pertenecen a cada pestaña — varias filas de la
 // tabla que dio el usuario para esta carta (ver conversación) caen dentro de la misma pestaña:
@@ -237,19 +326,35 @@ const CATEGORY_RANGES = {
 const EXTRA_RANGES = {
     tostadas: {
         start: 1101, end: 1199,
-        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra'
+        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra',
+        RU: 'Дополнительные ингредиенты', NL: 'Extra Ingrediënten', PL: 'Dodatkowe Składniki', SV: 'Extra Ingredienser', NO: 'Ekstra Ingredienser',
+        DA: 'Ekstra Ingredienser', FI: 'Lisätäytteet', PT: 'Ingredientes Extra', RO: 'Ingrediente Suplimentare', HU: 'Extra Hozzávalók',
+        CS: 'Extra Ingredience', EL: 'Επιπλέον Υλικά', TR: 'Ekstra Malzemeler', AR: 'مكونات إضافية', ZH: '额外配料', JA: '追加具材',
+        KO: '추가 재료', CA: 'Ingredients Extra', EU: 'Osagai Gehigarriak', GL: 'Ingredientes Extra', VA: 'Ingredients Extra'
     },
     bocadillos: {
         start: 1401, end: 1499,
-        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra'
+        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra',
+        RU: 'Дополнительные ингредиенты', NL: 'Extra Ingrediënten', PL: 'Dodatkowe Składniki', SV: 'Extra Ingredienser', NO: 'Ekstra Ingredienser',
+        DA: 'Ekstra Ingredienser', FI: 'Lisätäytteet', PT: 'Ingredientes Extra', RO: 'Ingrediente Suplimentare', HU: 'Extra Hozzávalók',
+        CS: 'Extra Ingredience', EL: 'Επιπλέον Υλικά', TR: 'Ekstra Malzemeler', AR: 'مكونات إضافية', ZH: '额外配料', JA: '追加具材',
+        KO: '추가 재료', CA: 'Ingredients Extra', EU: 'Osagai Gehigarriak', GL: 'Ingredientes Extra', VA: 'Ingredients Extra'
     },
     ensaladas: {
         start: 2101, end: 2199,
-        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra'
+        ES: 'Ingredientes Extra', EN: 'Extra Ingredients', DE: 'Extra-Zutaten', FR: 'Suppléments', IT: 'Ingredienti Extra',
+        RU: 'Дополнительные ингредиенты', NL: 'Extra Ingrediënten', PL: 'Dodatkowe Składniki', SV: 'Extra Ingredienser', NO: 'Ekstra Ingredienser',
+        DA: 'Ekstra Ingredienser', FI: 'Lisätäytteet', PT: 'Ingredientes Extra', RO: 'Ingrediente Suplimentare', HU: 'Extra Hozzávalók',
+        CS: 'Extra Ingredience', EL: 'Επιπλέον Υλικά', TR: 'Ekstra Malzemeler', AR: 'مكونات إضافية', ZH: '额外配料', JA: '追加具材',
+        KO: '추가 재료', CA: 'Ingredients Extra', EU: 'Osagai Gehigarriak', GL: 'Ingredientes Extra', VA: 'Ingredients Extra'
     },
     principales: {
         start: 5001, end: 5099,
-        ES: 'Guarnición Extra', EN: 'Extra Side Dishes', DE: 'Extra-Beilagen', FR: 'Garnitures Supplémentaires', IT: 'Contorni Extra'
+        ES: 'Guarnición Extra', EN: 'Extra Side Dishes', DE: 'Extra-Beilagen', FR: 'Garnitures Supplémentaires', IT: 'Contorni Extra',
+        RU: 'Дополнительные гарниры', NL: 'Extra Bijgerechten', PL: 'Dodatkowe Dodatki', SV: 'Extra Tillbehör', NO: 'Ekstra Tilbehør',
+        DA: 'Ekstra Tilbehør', FI: 'Ylimääräiset Lisäkkeet', PT: 'Acompanhamentos Extra', RO: 'Garnituri Suplimentare', HU: 'Extra Köretek',
+        CS: 'Extra Přílohy', EL: 'Επιπλέον Συνοδευτικά', TR: 'Ekstra Garnitürler', AR: 'أطباق جانبية إضافية', ZH: '额外配菜', JA: '追加サイドディッシュ',
+        KO: '추가 사이드 메뉴', CA: 'Guarnicions Extra', EU: 'Gehigarrizko Garnizioak', GL: 'Garnicións Extra', VA: 'Guarnicions Extra'
     }
 };
 
@@ -263,32 +368,60 @@ const SUBCATEGORIAS_RANGES = {
     bebidas_saludables: [
         {
             start: 10301, end: 10399,
-            ES: 'Zumos Saludables', EN: 'Healthy Juices', DE: 'Gesunde Säfte', FR: 'Jus Sains', IT: 'Succhi Salutari'
+            ES: 'Zumos Saludables', EN: 'Healthy Juices', DE: 'Gesunde Säfte', FR: 'Jus Sains', IT: 'Succhi Salutari',
+            RU: 'Полезные соки', NL: 'Gezonde Sappen', PL: 'Zdrowe Soki', SV: 'Hälsosamma Juicer', NO: 'Sunne Juicer',
+            DA: 'Sunde Juicer', FI: 'Terveelliset Mehut', PT: 'Sumos Saudáveis', RO: 'Sucuri Sănătoase', HU: 'Egészséges Levek',
+            CS: 'Zdravé Šťávy', EL: 'Υγιεινοί Χυμοί', TR: 'Sağlıklı Meyve Suları', AR: 'عصائر صحية', ZH: '健康果汁', JA: 'ヘルシージュース',
+            KO: '건강 주스', CA: 'Sucs Saludables', EU: 'Zuku Osasungarriak', GL: 'Zumos Saudables', VA: 'Sucs Saludables'
         },
         {
             start: 10401, end: 10499,
-            ES: 'Botellas Saludables', EN: 'Healthy Bottled Drinks', DE: 'Gesunde Flaschengetränke', FR: 'Boissons en Bouteille Saines', IT: 'Bevande in Bottiglia Salutari'
+            ES: 'Botellas Saludables', EN: 'Healthy Bottled Drinks', DE: 'Gesunde Flaschengetränke', FR: 'Boissons en Bouteille Saines', IT: 'Bevande in Bottiglia Salutari',
+            RU: 'Полезные напитки в бутылках', NL: 'Gezonde Flesdranken', PL: 'Zdrowe Napoje Butelkowane', SV: 'Hälsosamma Flaskdrycker', NO: 'Sunne Flaskedrikker',
+            DA: 'Sunde Flaskedrikke', FI: 'Terveelliset Pullojuomat', PT: 'Bebidas Saudáveis Engarrafadas', RO: 'Băuturi Îmbuteliate Sănătoase', HU: 'Egészséges Palackozott Italok',
+            CS: 'Zdravé Lahvové Nápoje', EL: 'Υγιεινά Εμφιαλωμένα Ποτά', TR: 'Sağlıklı Şişe İçecekler', AR: 'مشروبات معبأة صحية', ZH: '健康瓶装饮料', JA: 'ヘルシーボトル飲料',
+            KO: '건강 병 음료', CA: 'Ampolles Saludables', EU: 'Botilako Edari Osasungarriak', GL: 'Botellas Saudables', VA: 'Botelles Saludables'
         }
     ],
     aperitivos: [
         {
             start: 11101, end: 11199,
-            ES: 'Aperitivos', EN: 'Aperitifs', DE: 'Aperitifs', FR: 'Apéritifs', IT: 'Aperitivi'
+            ES: 'Aperitivos', EN: 'Aperitifs', DE: 'Aperitifs', FR: 'Apéritifs', IT: 'Aperitivi',
+            RU: 'Аперитивы', NL: 'Aperitieven', PL: 'Aperitify', SV: 'Aperitifer', NO: 'Aperitiffer',
+            DA: 'Aperitiffer', FI: 'Aperitiivit', PT: 'Aperitivos', RO: 'Aperitive', HU: 'Aperitifek',
+            CS: 'Aperitivy', EL: 'Απεριτίφ', TR: 'Aperitifler', AR: 'المقبلات الفاتحة للشهية', ZH: '开胃酒', JA: 'アペリティフ',
+            KO: '아페리티프', CA: 'Aperitius', EU: 'Aperitiboak', GL: 'Aperitivos', VA: 'Aperitius'
         },
         {
             start: 11201, end: 11299,
-            ES: 'Copas de vino y sangría', EN: 'Wine & Sangria by the Glass', DE: 'Wein & Sangria im Glas', FR: 'Vin & Sangria au Verre', IT: 'Vino e Sangria al Calice'
+            ES: 'Copas de vino y sangría', EN: 'Wine & Sangria by the Glass', DE: 'Wein & Sangria im Glas', FR: 'Vin & Sangria au Verre', IT: 'Vino e Sangria al Calice',
+            RU: 'Вино и сангрия по бокалам', NL: 'Wijn & Sangria per Glas', PL: 'Wino i Sangria na Kieliszki', SV: 'Vin & Sangria på Glas', NO: 'Vin & Sangria i Glass',
+            DA: 'Vin & Sangria på Glas', FI: 'Viini & Sangria Lasillisina', PT: 'Vinho e Sangria a Copo', RO: 'Vin și Sangria la Pahar', HU: 'Bor és Sangria Pohárban',
+            CS: 'Víno a Sangria na Skleničky', EL: 'Κρασί & Σανγκρία σε Ποτήρι', TR: 'Kadehte Şarap ve Sangria', AR: 'النبيذ والسانجريا بالكأس', ZH: '杯装葡萄酒与桑格利亚汽酒', JA: 'グラスワイン＆サングリア',
+            KO: '잔술 와인 & 상그리아', CA: 'Copes de Vi i Sangria', EU: 'Ardoa eta Sangria Kopan', GL: 'Copas de Viño e Sangría', VA: 'Copes de Vi i Sangria'
         }
     ]
 };
 
 // NUEVO (8 septiembre): etiquetas de la cabecera "1/2 | Entero" que aparece encima de una
 // categoría en cuanto ALGÚN plato de esa pestaña tiene precio de media ración (item.precioMedia,
-// ver PRECIO_MEDIA en parseCSV/Código.gs). Mismo patrón de fallback que categoriesList/EXTRA_RANGES:
-// solo se traduce a los 5 idiomas principales, el resto cae en EN y luego ES.
+// ver PRECIO_MEDIA en parseCSV/Código.gs). MODIFICADO: completados los 26 idiomas (a petición
+// del usuario), igual que el resto de textos de la web.
 const PRICE_HEADER_LABELS = {
-    half: { ES: '1/2', EN: 'Half', DE: 'Halb', FR: '1/2', IT: '1/2' },
-    full: { ES: 'Entero', EN: 'Whole', DE: 'Ganz', FR: 'Entier', IT: 'Intero' }
+    half: {
+        ES: '1/2', EN: 'Half', DE: 'Halb', FR: '1/2', IT: '1/2',
+        RU: 'Половина', NL: 'Half', PL: 'Połowa', SV: 'Halv', NO: 'Halv',
+        DA: 'Halv', FI: 'Puolikas', PT: 'Meia', RO: 'Jumătate', HU: 'Fél',
+        CS: 'Půl', EL: 'Μισή', TR: 'Yarım', AR: 'نصف', ZH: '半份', JA: 'ハーフ',
+        KO: '하프', CA: '1/2', EU: 'Erdia', GL: 'Media', VA: '1/2'
+    },
+    full: {
+        ES: 'Entero', EN: 'Whole', DE: 'Ganz', FR: 'Entier', IT: 'Intero',
+        RU: 'Целая', NL: 'Heel', PL: 'Cała', SV: 'Hel', NO: 'Hel',
+        DA: 'Hel', FI: 'Kokonainen', PT: 'Inteira', RO: 'Întreagă', HU: 'Egész',
+        CS: 'Celá', EL: 'Ολόκληρη', TR: 'Tam', AR: 'كامل', ZH: '整份', JA: 'フル',
+        KO: '풀', CA: 'Sencer', EU: 'Osoa', GL: 'Enteira', VA: 'Sencer'
+    }
 };
 
 // NUEVO (8 septiembre): "notas informativas" — filas puntuales sin precio (p.ej. "Opción de pan
@@ -304,33 +437,151 @@ const NOTAS_INFORMATIVAS_IDS = [1105, 1703, 1705, 2101];
 // que dio el usuario (carta impresa): columna izquierda = alérgenos "de siempre" + los 2 tipos
 // de plato al final; columna derecha = el resto.
 const ALERGENOS_INFO_COL_IZQUIERDA = [
-    { code: 'GLUTEN', ES: 'Gluten', EN: 'Gluten', DE: 'Gluten', FR: 'Gluten', IT: 'Glutine' },
-    { code: 'LACTOSA', ES: 'Lactosa', EN: 'Lactose', DE: 'Laktose', FR: 'Lactose', IT: 'Lattosio' },
-    { code: 'FRUTOSCASCARA', ES: 'Frutos de Cáscara', EN: 'Tree Nuts', DE: 'Schalenfrüchte', FR: 'Fruits à Coque', IT: 'Frutta a Guscio' },
-    { code: 'SULFITOS', ES: 'Sulfitos', EN: 'Sulphites', DE: 'Sulfite', FR: 'Sulfites', IT: 'Solfiti' },
-    { code: 'HUEVO', ES: 'Huevo', EN: 'Egg', DE: 'Ei', FR: 'Œuf', IT: 'Uovo' },
-    { code: 'MOLUSCO', ES: 'Molusco', EN: 'Molluscs', DE: 'Weichtiere', FR: 'Mollusques', IT: 'Molluschi' },
-    { code: 'PESCADO', ES: 'Pescado', EN: 'Fish', DE: 'Fisch', FR: 'Poisson', IT: 'Pesce' },
-    { code: 'VEGETARIANO', ES: 'Plato Vegetariano', EN: 'Vegetarian Dish', DE: 'Vegetarisches Gericht', FR: 'Plat Végétarien', IT: 'Piatto Vegetariano' },
-    { code: 'VEGANO', ES: 'Plato Vegano', EN: 'Vegan Dish', DE: 'Veganes Gericht', FR: 'Plat Végétalien', IT: 'Piatto Vegano' }
+    { code: 'GLUTEN',
+        ES: 'Gluten', EN: 'Gluten', DE: 'Gluten', FR: 'Gluten', IT: 'Glutine',
+        RU: 'Глютен', NL: 'Gluten', PL: 'Gluten', SV: 'Gluten', NO: 'Gluten',
+        DA: 'Gluten', FI: 'Gluteeni', PT: 'Glúten', RO: 'Gluten', HU: 'Glutén',
+        CS: 'Lepek', EL: 'Γλουτένη', TR: 'Gluten', AR: 'الغلوتين', ZH: '麸质', JA: 'グルテン',
+        KO: '글루텐', CA: 'Gluten', EU: 'Glutena', GL: 'Glute', VA: 'Gluten'
+    },
+    { code: 'LACTOSA',
+        ES: 'Lactosa', EN: 'Lactose', DE: 'Laktose', FR: 'Lactose', IT: 'Lattosio',
+        RU: 'Лактоза', NL: 'Lactose', PL: 'Laktoza', SV: 'Laktos', NO: 'Laktose',
+        DA: 'Laktose', FI: 'Laktoosi', PT: 'Lactose', RO: 'Lactoză', HU: 'Laktóz',
+        CS: 'Laktóza', EL: 'Λακτόζη', TR: 'Laktoz', AR: 'اللاكتوز', ZH: '乳糖', JA: '乳糖',
+        KO: '유당', CA: 'Lactosa', EU: 'Laktosa', GL: 'Lactosa', VA: 'Lactosa'
+    },
+    { code: 'FRUTOSCASCARA',
+        ES: 'Frutos de Cáscara', EN: 'Tree Nuts', DE: 'Schalenfrüchte', FR: 'Fruits à Coque', IT: 'Frutta a Guscio',
+        RU: 'Орехи', NL: 'Noten', PL: 'Orzechy', SV: 'Nötter', NO: 'Nøtter',
+        DA: 'Nødder', FI: 'Pähkinät', PT: 'Frutos de Casca Rija', RO: 'Fructe cu Coajă', HU: 'Diófélék',
+        CS: 'Skořápkové plody', EL: 'Ξηροί Καρποί', TR: 'Kabuklu Yemişler', AR: 'المكسرات', ZH: '坚果', JA: 'ナッツ類',
+        KO: '견과류', CA: 'Fruits de Closca', EU: 'Fruitu Lehorrak', GL: 'Froitos Secos', VA: 'Fruits de Closca'
+    },
+    { code: 'SULFITOS',
+        ES: 'Sulfitos', EN: 'Sulphites', DE: 'Sulfite', FR: 'Sulfites', IT: 'Solfiti',
+        RU: 'Сульфиты', NL: 'Sulfieten', PL: 'Siarczyny', SV: 'Sulfiter', NO: 'Sulfitter',
+        DA: 'Sulfitter', FI: 'Sulfiitit', PT: 'Sulfitos', RO: 'Sulfiți', HU: 'Szulfitok',
+        CS: 'Siřičitany', EL: 'Θειώδη', TR: 'Sülfitler', AR: 'الكبريتيت', ZH: '亚硫酸盐', JA: '亜硫酸塩',
+        KO: '아황산염', CA: 'Sulfits', EU: 'Sulfitoak', GL: 'Sulfitos', VA: 'Sulfits'
+    },
+    { code: 'HUEVO',
+        ES: 'Huevo', EN: 'Egg', DE: 'Ei', FR: 'Œuf', IT: 'Uovo',
+        RU: 'Яйца', NL: 'Ei', PL: 'Jajka', SV: 'Ägg', NO: 'Egg',
+        DA: 'Æg', FI: 'Kananmuna', PT: 'Ovo', RO: 'Ou', HU: 'Tojás',
+        CS: 'Vejce', EL: 'Αυγό', TR: 'Yumurta', AR: 'البيض', ZH: '鸡蛋', JA: '卵',
+        KO: '계란', CA: 'Ou', EU: 'Arrautza', GL: 'Ovo', VA: 'Ou'
+    },
+    { code: 'MOLUSCO',
+        ES: 'Molusco', EN: 'Molluscs', DE: 'Weichtiere', FR: 'Mollusques', IT: 'Molluschi',
+        RU: 'Моллюски', NL: 'Weekdieren', PL: 'Mięczaki', SV: 'Blötdjur', NO: 'Bløtdyr',
+        DA: 'Bløddyr', FI: 'Nilviäiset', PT: 'Moluscos', RO: 'Moluște', HU: 'Puhatestűek',
+        CS: 'Měkkýši', EL: 'Μαλάκια', TR: 'Yumuşakçalar', AR: 'الرخويات', ZH: '软体动物', JA: '軟体動物',
+        KO: '연체동물', CA: 'Mol·luscos', EU: 'Moluskuak', GL: 'Moluscos', VA: 'Mol·luscs'
+    },
+    { code: 'PESCADO',
+        ES: 'Pescado', EN: 'Fish', DE: 'Fisch', FR: 'Poisson', IT: 'Pesce',
+        RU: 'Рыба', NL: 'Vis', PL: 'Ryby', SV: 'Fisk', NO: 'Fisk',
+        DA: 'Fisk', FI: 'Kala', PT: 'Peixe', RO: 'Pește', HU: 'Hal',
+        CS: 'Ryby', EL: 'Ψάρι', TR: 'Balık', AR: 'السمك', ZH: '鱼类', JA: '魚',
+        KO: '생선', CA: 'Peix', EU: 'Arraina', GL: 'Peixe', VA: 'Peix'
+    },
+    { code: 'VEGETARIANO',
+        ES: 'Plato Vegetariano', EN: 'Vegetarian Dish', DE: 'Vegetarisches Gericht', FR: 'Plat Végétarien', IT: 'Piatto Vegetariano',
+        RU: 'Вегетарианское блюдо', NL: 'Vegetarisch Gerecht', PL: 'Danie Wegetariańskie', SV: 'Vegetarisk Rätt', NO: 'Vegetarrett',
+        DA: 'Vegetarisk Ret', FI: 'Kasvisruoka', PT: 'Prato Vegetariano', RO: 'Fel Vegetarian', HU: 'Vegetáriánus Étel',
+        CS: 'Vegetariánské Jídlo', EL: 'Χορτοφαγικό Πιάτο', TR: 'Vejetaryen Yemek', AR: 'طبق نباتي', ZH: '素食菜肴', JA: 'ベジタリアン料理',
+        KO: '채식 요리', CA: 'Plat Vegetarià', EU: 'Plater Begetarianoa', GL: 'Prato Vexetariano', VA: 'Plat Vegetarià'
+    },
+    { code: 'VEGANO',
+        ES: 'Plato Vegano', EN: 'Vegan Dish', DE: 'Veganes Gericht', FR: 'Plat Végétalien', IT: 'Piatto Vegano',
+        RU: 'Веганское блюдо', NL: 'Veganistisch Gerecht', PL: 'Danie Wegańskie', SV: 'Vegansk Rätt', NO: 'Vegansk Rett',
+        DA: 'Vegansk Ret', FI: 'Vegaaniruoka', PT: 'Prato Vegan', RO: 'Fel Vegan', HU: 'Vegán Étel',
+        CS: 'Veganské Jídlo', EL: 'Βίγκαν Πιάτο', TR: 'Vegan Yemek', AR: 'طبق نباتي صرف', ZH: '纯素菜肴', JA: 'ビーガン料理',
+        KO: '비건 요리', CA: 'Plat Vegà', EU: 'Plater Beganoa', GL: 'Prato Vegano', VA: 'Plat Vegà'
+    }
 ];
 const ALERGENOS_INFO_COL_DERECHA = [
-    { code: 'SOJA', ES: 'Soja', EN: 'Soy', DE: 'Soja', FR: 'Soja', IT: 'Soia' },
-    { code: 'SESAMO', ES: 'Sésamo', EN: 'Sesame', DE: 'Sesam', FR: 'Sésame', IT: 'Sesamo' },
-    { code: 'ALTRAMUCES', ES: 'Altramuces', EN: 'Lupin', DE: 'Lupinen', FR: 'Lupin', IT: 'Lupini' },
-    { code: 'MOSTAZA', ES: 'Mostaza', EN: 'Mustard', DE: 'Senf', FR: 'Moutarde', IT: 'Senape' },
-    { code: 'CACAHUETE', ES: 'Cacahuete', EN: 'Peanuts', DE: 'Erdnüsse', FR: 'Arachides', IT: 'Arachidi' },
-    { code: 'CRUSTACEO', ES: 'Crustáceo', EN: 'Crustaceans', DE: 'Krebstiere', FR: 'Crustacés', IT: 'Crostacei' },
-    { code: 'APIO', ES: 'Apio', EN: 'Celery', DE: 'Sellerie', FR: 'Céleri', IT: 'Sedano' }
+    { code: 'SOJA',
+        ES: 'Soja', EN: 'Soy', DE: 'Soja', FR: 'Soja', IT: 'Soia',
+        RU: 'Соя', NL: 'Soja', PL: 'Soja', SV: 'Soja', NO: 'Soya',
+        DA: 'Soja', FI: 'Soija', PT: 'Soja', RO: 'Soia', HU: 'Szója',
+        CS: 'Sója', EL: 'Σόγια', TR: 'Soya', AR: 'الصويا', ZH: '大豆', JA: '大豆',
+        KO: '대두', CA: 'Soja', EU: 'Soja', GL: 'Soia', VA: 'Soja'
+    },
+    { code: 'SESAMO',
+        ES: 'Sésamo', EN: 'Sesame', DE: 'Sesam', FR: 'Sésame', IT: 'Sesamo',
+        RU: 'Кунжут', NL: 'Sesam', PL: 'Sezam', SV: 'Sesam', NO: 'Sesam',
+        DA: 'Sesam', FI: 'Seesami', PT: 'Sésamo', RO: 'Susan', HU: 'Szezámmag',
+        CS: 'Sezam', EL: 'Σουσάμι', TR: 'Susam', AR: 'السمسم', ZH: '芝麻', JA: 'ごま',
+        KO: '참깨', CA: 'Sèsam', EU: 'Ajonjolia', GL: 'Sésamo', VA: 'Sèsam'
+    },
+    { code: 'ALTRAMUCES',
+        ES: 'Altramuces', EN: 'Lupin', DE: 'Lupinen', FR: 'Lupin', IT: 'Lupini',
+        RU: 'Люпин', NL: 'Lupine', PL: 'Łubin', SV: 'Lupin', NO: 'Lupin',
+        DA: 'Lupin', FI: 'Lupiini', PT: 'Tremoço', RO: 'Lupin', HU: 'Csillagfürt',
+        CS: 'Vlčí bob', EL: 'Λούπινο', TR: 'Acı Bakla', AR: 'الترمس', ZH: '羽扇豆', JA: 'ルピナス豆',
+        KO: '루핀', CA: 'Tramussos', EU: 'Altramuzak', GL: 'Chocho', VA: 'Tramussos'
+    },
+    { code: 'MOSTAZA',
+        ES: 'Mostaza', EN: 'Mustard', DE: 'Senf', FR: 'Moutarde', IT: 'Senape',
+        RU: 'Горчица', NL: 'Mosterd', PL: 'Gorczyca', SV: 'Senap', NO: 'Sennep',
+        DA: 'Sennep', FI: 'Sinappi', PT: 'Mostarda', RO: 'Muștar', HU: 'Mustár',
+        CS: 'Hořčice', EL: 'Μουστάρδα', TR: 'Hardal', AR: 'الخردل', ZH: '芥末', JA: 'マスタード',
+        KO: '겨자', CA: 'Mostassa', EU: 'Mostaza', GL: 'Mostaza', VA: 'Mostassa'
+    },
+    { code: 'CACAHUETE',
+        ES: 'Cacahuete', EN: 'Peanuts', DE: 'Erdnüsse', FR: 'Arachides', IT: 'Arachidi',
+        RU: 'Арахис', NL: "Pinda's", PL: 'Orzeszki Ziemne', SV: 'Jordnötter', NO: 'Peanøtter',
+        DA: 'Jordnødder', FI: 'Maapähkinä', PT: 'Amendoim', RO: 'Arahide', HU: 'Földimogyoró',
+        CS: 'Arašídy', EL: 'Αράπικο Φιστίκι', TR: 'Yer Fıstığı', AR: 'الفول السوداني', ZH: '花生', JA: 'ピーナッツ',
+        KO: '땅콩', CA: 'Cacauet', EU: 'Kakahuetea', GL: 'Cacahuete', VA: 'Cacauet'
+    },
+    { code: 'CRUSTACEO',
+        ES: 'Crustáceo', EN: 'Crustaceans', DE: 'Krebstiere', FR: 'Crustacés', IT: 'Crostacei',
+        RU: 'Ракообразные', NL: 'Schaaldieren', PL: 'Skorupiaki', SV: 'Kräftdjur', NO: 'Skalldyr',
+        DA: 'Skaldyr', FI: 'Äyriäiset', PT: 'Crustáceos', RO: 'Crustacee', HU: 'Rákfélék',
+        CS: 'Korýši', EL: 'Καρκινοειδή', TR: 'Kabuklular', AR: 'القشريات', ZH: '甲壳类', JA: '甲殻類',
+        KO: '갑각류', CA: 'Crustacis', EU: 'Krustazeoak', GL: 'Crustáceos', VA: 'Crustacis'
+    },
+    { code: 'APIO',
+        ES: 'Apio', EN: 'Celery', DE: 'Sellerie', FR: 'Céleri', IT: 'Sedano',
+        RU: 'Сельдерей', NL: 'Selderij', PL: 'Seler', SV: 'Selleri', NO: 'Selleri',
+        DA: 'Selleri', FI: 'Selleri', PT: 'Aipo', RO: 'Țelină', HU: 'Zeller',
+        CS: 'Celer', EL: 'Σέλινο', TR: 'Kereviz', AR: 'الكرفس', ZH: '芹菜', JA: 'セロリ',
+        KO: '셀러리', CA: 'Api', EU: 'Apioa', GL: 'Apio', VA: 'Api'
+    }
 ];
 // Frase de aviso debajo de la leyenda -- propuesta por Claude (el usuario pidió que se
-// redactara una), pendiente de que la confirme o la sustituya por un texto propio.
+// redactara una), pendiente de que la confirme o la sustituya por un texto propio. MODIFICADO:
+// traducida a los 26 idiomas a petición del usuario.
 const ALERGENOS_AVISO_TEXTO = {
     ES: 'Si padece alguna alergia o intolerancia alimentaria, por favor infórmenos antes de realizar su pedido. Estaremos encantados de ayudarle a elegir las mejores opciones.',
     EN: 'If you have any food allergy or intolerance, please let us know before placing your order. We will be happy to help you choose the best options.',
     DE: 'Wenn Sie an einer Lebensmittelallergie oder -unverträglichkeit leiden, informieren Sie uns bitte vor der Bestellung. Wir helfen Ihnen gerne bei der Auswahl der besten Optionen.',
     FR: 'Si vous souffrez d\'une allergie ou d\'une intolérance alimentaire, merci de nous en informer avant de passer commande. Nous serons heureux de vous aider à choisir les meilleures options.',
-    IT: 'Se soffre di un\'allergia o intolleranza alimentare, vi preghiamo di avvisarci prima di ordinare. Saremo lieti di aiutarvi a scegliere le opzioni migliori.'
+    IT: 'Se soffre di un\'allergia o intolleranza alimentare, vi preghiamo di avvisarci prima di ordinare. Saremo lieti di aiutarvi a scegliere le opzioni migliori.',
+    RU: 'Если у вас есть пищевая аллергия или непереносимость, пожалуйста, сообщите нам об этом перед заказом. Мы будем рады помочь вам выбрать лучшие варианты.',
+    NL: 'Als u een voedselallergie of -intolerantie heeft, laat het ons dan weten voordat u bestelt. Wij helpen u graag de beste opties te kiezen.',
+    PL: 'Jeśli masz jakąkolwiek alergię lub nietolerancję pokarmową, poinformuj nas przed złożeniem zamówienia. Chętnie pomożemy Ci wybrać najlepsze opcje.',
+    SV: 'Om du har någon matallergi eller intolerans, vänligen meddela oss innan du beställer. Vi hjälper dig gärna att välja de bästa alternativen.',
+    NO: 'Hvis du har en matallergi eller intoleranse, vennligst gi oss beskjed før du bestiller. Vi hjelper deg gjerne med å velge de beste alternativene.',
+    DA: 'Hvis du har en fødevareallergi eller intolerance, bedes du give os besked, inden du bestiller. Vi hjælper dig gerne med at vælge de bedste muligheder.',
+    FI: 'Jos sinulla on ruoka-allergia tai -intoleranssi, ilmoita siitä meille ennen tilaamista. Autamme mielellämme valitsemaan parhaat vaihtoehdot.',
+    PT: 'Se sofre de alguma alergia ou intolerância alimentar, informe-nos antes de fazer o seu pedido. Teremos todo o gosto em ajudá-lo a escolher as melhores opções.',
+    RO: 'Dacă suferiți de vreo alergie sau intoleranță alimentară, vă rugăm să ne informați înainte de a comanda. Vom fi bucuroși să vă ajutăm să alegeți cele mai bune opțiuni.',
+    HU: 'Ha bármilyen ételallergiája vagy -intoleranciája van, kérjük, tájékoztasson minket rendelés előtt. Szívesen segítünk a legjobb lehetőségek kiválasztásában.',
+    CS: 'Pokud trpíte jakoukoli potravinovou alergií nebo intolerancí, informujte nás prosím před objednáním. Rádi vám pomůžeme vybrat ty nejlepší možnosti.',
+    EL: 'Εάν έχετε κάποια τροφική αλλεργία ή δυσανεξία, παρακαλούμε ενημερώστε μας πριν παραγγείλετε. Θα χαρούμε να σας βοηθήσουμε να επιλέξετε τις καλύτερες επιλογές.',
+    TR: 'Herhangi bir gıda alerjiniz veya intoleransınız varsa, lütfen siparişinizi vermeden önce bize bildirin. En iyi seçenekleri seçmenize yardımcı olmaktan memnuniyet duyarız.',
+    AR: 'إذا كنت تعاني من أي حساسية أو عدم تحمل غذائي، يرجى إخبارنا قبل تقديم طلبك. سيسعدنا مساعدتك في اختيار أفضل الخيارات.',
+    ZH: '如果您有任何食物过敏或不耐受，请在点餐前告知我们。我们将很乐意帮助您选择最佳选项。',
+    JA: '食物アレルギーや不耐性がある場合は、ご注文の前にお知らせください。最適なメニューをお選びするお手伝いをいたします。',
+    KO: '식품 알레르기나 불내증이 있으시면 주문 전에 알려주시기 바랍니다. 최선의 선택을 하실 수 있도록 기꺼이 도와드리겠습니다.',
+    CA: 'Si pateix alguna al·lèrgia o intolerància alimentària, informi\'ns abans de fer la seva comanda. Estarem encantats d\'ajudar-lo a triar les millors opcions.',
+    EU: 'Elikagai-alergiaren edo intolerantziaren bat baduzu, mesedez jakinarazi eskaera egin aurretik. Pozik lagunduko dizugu aukerarik onenak hautatzen.',
+    GL: 'Se padece algunha alerxia ou intolerancia alimentaria, por favor infórmenos antes de facer o seu pedido. Estaremos encantados de axudarlle a escoller as mellores opcións.',
+    VA: 'Si patix alguna al·lèrgia o intolerància alimentària, per favor informe\'ns abans de fer la seua comanda. Estarem encantats d\'ajudar-lo a triar les millors opcions.'
 };
 
 // NUEVO: pinta la página fija de la pestaña "Alérgenos e Intolerancias" -- 2 columnas de
